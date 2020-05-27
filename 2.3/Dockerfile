@@ -18,9 +18,13 @@ ENV	APP_BASE_DIR=/usr/local/${APP_NAME} \
 	APP_CACHE_DIR=/var/cache/${APP_NAME} \
 	APP_RUN_DIR=/var/run/${APP_NAME} \
 	APP_LOG_DIR=/var/log/${APP_NAME} \
-	KAFKA_VERSION=${kafka_version} \
+	PATH="/usr/local/bin/colovu:/usr/local/bin/app:${PATH}"
+
+# 设置KAFKA需要的环境变量
+ENV KAFKA_VERSION=${kafka_version} \
 	SCALA_VERSION=${scala_version} \
-	PATH="/usr/local/bin/colovu:/usr/local/bin/app:/usr/local/${APP_NAME}/bin:${PATH}"
+	KAFKA_HOME=${APP_BASE_DIR}
+	PATH="${APP_BASE_DIR}/bin:${PATH}"
 
 LABEL \
 	"Version"="v${APP_VERSION}" \
