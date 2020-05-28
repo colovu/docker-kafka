@@ -88,7 +88,7 @@ RUN set -eux; \
 VOLUME ["/srv/conf", "/srv/data", "/var/log", "/var/run"]
 
 # 默认使用gosu切换为新建用户启动，必须保证端口在1024之上
-EXPOSE 8080
+EXPOSE 9092
 
 # 容器初始化命令，默认存放在：/usr/local/bin/app/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
