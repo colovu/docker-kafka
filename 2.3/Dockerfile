@@ -23,7 +23,7 @@ ENV	APP_BASE_DIR=/usr/local/${APP_NAME} \
 # 设置KAFKA需要的环境变量
 ENV KAFKA_VERSION=${kafka_version} \
 	SCALA_VERSION=${scala_version} \
-	KAFKA_HOME=${APP_BASE_DIR}
+	KAFKA_HOME=${APP_BASE_DIR} \
 	PATH="${APP_BASE_DIR}/bin:${PATH}"
 
 LABEL \
