@@ -2,10 +2,8 @@
 #
 # 文件管理函数库
 
-# 文件列表
-
 # 加载依赖项
-. /usr/local/bin/colovu/cv-log.sh
+. /usr/local/scripts/liblog.sh
 
 # 函数列表
 
@@ -13,7 +11,7 @@
 # Arguments:
 #   $1 - filepath
 #   $2 - owner
-owned_by() {
+ensure_owned_by() {
     local path="${1:?path is missing}"
     local owner="${2:?owner is missing}"
 
@@ -30,7 +28,7 @@ ensure_dir_exists() {
 
     mkdir -p "${dir}"
     if [[ -n $owner ]]; then
-        owned_by "$dir" "$owner"
+        ensure_owned_by "$dir" "$owner"
     fi
 }
 
@@ -85,7 +83,7 @@ configure_permissions_ownership() {
                 group="${1:?missing group}"
                 ;;
             *)
-                echo "Invalid command line flag $1" >&2
+                LOG_E "Invalid command line flag $1" >&2
                 return 1
                 ;;
         esac
@@ -95,22 +93,27 @@ configure_permissions_ownership() {
     read -r -a filepaths <<< "$paths"
     for p in "${filepaths[@]}"; do
         if [[ -e "$p" ]]; then
+            LOG_D "Check directory $p"
             if [[ -n $dir_mode ]]; then
-                find -L "$p" -type d -exec chmod "$dir_mode" {} \;
+                LOG_D "Change permissions to 755 of directories in $p"
+                find -L "$p" -type d -exec chmod "$dir_mode" '{}' +
             fi
             if [[ -n $file_mode ]]; then
-                find -L "$p" -type f -exec chmod "$file_mode" {} \;
+                LOG_D "Change permissions to 755 of files in $p"
+                find -L "$p" -type f -exec chmod "$file_mode" '{}' +
             fi
             if [[ -n $user ]] && [[ -n $group ]]; then
-            	find -L "$p" \! -user ${user} -or \! -group ${group} -exec chown -L "$user":"$group" '{}' +
-                chown -LR "$user":"$group" "$p"
+                LOG_D "Change ownership to ${user}:${group} of files and directories in $p"
+                find -L "$p" \! -user ${user} -or \! -group ${group} -exec chown -L "$user":"$group" '{}' +
             elif [[ -n $user ]] && [[ -z $group ]]; then
+                LOG_D "Change user to ${user} of files and directories in $p"
                 find -L "$p" \! -user ${user} -exec chown -L "$user" '{}' +
             elif [[ -z $user ]] && [[ -n $group ]]; then
+                LOG_D "Change groupto ${group} of files and directories in $p"
                 find -L "$p" \! -group ${group} -exec chgrp -L "$group" '{}' +
             fi
         else
-            stderr_print "$p does not exist"
+            LOG_E "$p does not exist"
         fi
     done
 }

@@ -5,7 +5,7 @@
 # shellcheck disable=SC1091
 
 # 加载依赖项
-. /usr/local/bin/colovu/cv-log.sh
+. /usr/local/scripts/liblog.sh
 
 # 函数列表
 

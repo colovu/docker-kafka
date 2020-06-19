@@ -4,11 +4,12 @@
 
 # 定义颜色信息
 RESET='\033[0m'
-RED='\033[38;5;1m'
-GREEN='\033[38;5;2m'
-YELLOW='\033[38;5;3m'
-MAGENTA='\033[38;5;5m'
-CYAN='\033[38;5;6m'
+RED='\033[31;1m'
+GREEN='\033[32;2m'
+YELLOW='\033[33;1m'
+MAGENTA='\033[36;2m'
+CYAN='\033[35;2m'
+BLUE='\033[34;2m'
 
 # 函数列表
 
@@ -19,10 +20,10 @@ CYAN='\033[38;5;6m'
 LOG_RAW() {
     local type="$1"; shift
     case "${type}" in
-        x)  printf "${MAGENTA}%s$ ${CYAN}[%s]${RESET} %b\n" "$(date "+%T.%2N")" "${type}" "${*}" ;;
-        I)  printf "${MAGENTA}%s$ ${GREEN}[%s]${RESET} %b\n" "$(date "+%T.%2N")" "${type}" "${*}";;
-        W)  printf "${MAGENTA}%s$ ${YELLOW}[%s]${RESET} %b\n" "$(date "+%T.%2N")" "${type}" "${*}";;
-        E)  printf "${MAGENTA}%s$ ${RED}[%s]${RESET} %b\n" "$(date "+%T.%2N")" "${type}" "${*}";;
+        x)  printf "${CYAN}${APP_NAME:-} ${MAGENTA}%s ${RESET}${BLUE}DEBUG${RESET} %b\n" "$(date "+%T.%2N")" "${*}" ;;
+        I)  printf "${CYAN}${APP_NAME:-} ${MAGENTA}%s ${RESET}${GREEN}INFO ${RESET} %b\n" "$(date "+%T.%2N")" "${*}";;
+        W)  printf "${CYAN}${APP_NAME:-} ${MAGENTA}%s ${RESET}${YELLOW}WARN ${RESET} %b\n" "$(date "+%T.%2N")" "${*}";;
+        E)  printf "${CYAN}${APP_NAME:-} ${MAGENTA}%s ${RESET}${RED}ERROR${RESET} %b\n" "$(date "+%T.%2N")" "${*}";;
     esac
 }
 
@@ -31,7 +32,11 @@ LOG_RAW() {
 #   $1 - 日志类型
 #   $2 - 日志信息
 LOG_D() {
-    LOG_RAW x "$@"
+    local -r bool="${ENV_DEBUG:-false}"
+    shopt -s nocasematch
+    if [[ "$bool" = 1 || "$bool" =~ ^(yes|true)$ ]]; then
+        LOG_RAW x "$@"
+    fi   
 }
 
 # 输出提示信息类日志信息
