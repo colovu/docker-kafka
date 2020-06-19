@@ -63,7 +63,7 @@ RUN set -eux; \
 # 使用下载(编译)方式安装软件
 	DIST_NAME="render-template-1.0.0-0-linux-amd64-debian-10"; \
 	DIST_URL=" \
-		http://192.168.1.129/dist-files/ \
+#		http://192.168.1.129/dist-files/ \
 		https://downloads.bitnami.com/files/stacksmith/ \
 		"; \
 	. /usr/local/scripts/libdownload.sh && download_dist "${DIST_NAME}.tar.gz" "${DIST_URL}"; \
@@ -82,7 +82,7 @@ RUN set -eux; \
 		0x586EFEF859AF2DB190D84080BDB2011E173C31A2 \
 		"; \
 	DIST_URL=" \
-		http://192.168.1.129/dist-files/ \
+#		http://192.168.1.129/dist-files/ \
 		'https://www.apache.org/dyn/closer.cgi?action=download&filename='${APP_NAME}/${KAFKA_VERSION}/ \
 		https://www-us.apache.org/dist/${APP_NAME}/${KAFKA_VERSION}/ \
 		https://www.apache.org/dist/${APP_NAME}/${KAFKA_VERSION}/ \
