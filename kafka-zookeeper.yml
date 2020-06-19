@@ -1,0 +1,26 @@
+version: '3.6'
+
+services:
+  zookeeper:
+    image: 'colovu/zookeeper:latest'
+    container_name: zookeeper
+    ports:
+      - 2181:2181
+    environment:
+      - ZOO_ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_LISTEN_ALLIPS_ENABLED=yes
+
+  kafka1:
+    image: 'colovu/kafka:latest'
+    ports:
+      - '9092:9092'
+    container_name: kafka1
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
+      - KAFKA_LISTENERS=INTERNAL://:9093,CLIENT://kafka1:9092
+      - KAFKA_ADVERTISED_LISTENERS=INTERNAL://:9093,CLIENT://:9092
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+    depends_on:
+      - zookeeper
