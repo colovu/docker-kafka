@@ -203,7 +203,7 @@ $ docker run -it --rm	--network app-tier \
 
 
 
-其他业务容器连接至 ZooKeeper 容器：
+其他业务容器连接至 Kafka 容器：
 
 ```shell
 $ docker run -d --name other-app --network app-tier --link kafka1:kafka -d other-app-image:tag
@@ -280,7 +280,7 @@ $ docker exec -it kafka1 /bin/bash
 使用 attach 命令进入已运行的容器：
 
 ```shell
-$ docker attach  --sig-proxy=false kafka1
+$ docker attach --sig-proxy=false kafka1
 ```
 
 - **该方式无法执行命令**，仅用于通过日志观察应用运行状态
@@ -611,7 +611,7 @@ $ docker run -d -e "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181" --name kafka1 colovu
 
 ### 集群配置参数
 
-使用 Kafka 镜像，可以很容易的建立一个Kafka 集群。针对 集群模式，有以下参数可以配置：
+使用 Kafka 镜像，可以很容易的建立一个 Kafka 集群。针对 集群模式，有以下参数可以配置：
 
 #### `KAFKA_BROKER_ID`
 
