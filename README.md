@@ -777,7 +777,7 @@ $ docker run -d -e "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181" --name kafka1 colovu
 
 #### 使用已有配置文件
 
-Kafka 容器的配置文件默认存储在数据卷`/srv/conf`中，子路径为`zookeeper`。有以下两种方式可以使用自定义的配置文件：
+Kafka 容器的配置文件默认存储在数据卷`/srv/conf`中，子路径为`kafka`。有以下两种方式可以使用自定义的配置文件：
 
 - 直接映射配置文件
 

@@ -25,7 +25,7 @@ print_image_welcome_page() {
     LOG_I " ###   ##  ###   ##  ###       ###   ##    ####    ###   ##"
     LOG_I "########  ########  ########  ########     ##     ########"
     LOG_I ""
-        LOG_I "Welcome to the ${BOLD}${APP_NAME}${RESET} container"
+    LOG_I "Welcome to the ${BOLD}${APP_NAME}${RESET} container"
     LOG_I "Project on Github: ${BOLD}${github_url}${RESET}"
     LOG_I "Send us your feedback at ${BOLD}endial@126.com${RESET}"
     LOG_I ""

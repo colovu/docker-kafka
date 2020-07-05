@@ -234,7 +234,7 @@ app_verify_minimum_env() {
         done
     }
     check_conflicting_listener_ports() {
-    local validate_port_args=()
+        local validate_port_args=()
         ! _is_run_as_root && validate_port_args+=("-unprivileged")
         if ! err=$(validate_port "${validate_port_args[@]}" "$1"); then
             print_validation_error "An invalid port was specified in the environment variable KAFKA_CFG_LISTENERS: $err"
@@ -418,7 +418,7 @@ kafka_configure_internal_communications() {
             # The below lines would need to be updated to support other SASL implementations (i.e. GSSAPI)
             # IMPORTANT: Do not confuse SASL/PLAIN with PLAINTEXT
             # For more information, see: https://docs.confluent.io/current/kafka/authentication_sasl/authentication_sasl_plain.html#sasl-plain-overview)
-    kafka_server_conf_set sasl.mechanism.inter.broker.protocol PLAIN
+            kafka_server_conf_set sasl.mechanism.inter.broker.protocol PLAIN
         fi
         if [[ "$protocol" = "SASL_SSL" ]] || [[ "$protocol" = "SSL" ]]; then
             kafka_configure_ssl
@@ -450,8 +450,8 @@ kafka_configure_client_communications() {
             # The below lines would need to be updated to support other SASL implementations (i.e. GSSAPI)
             # IMPORTANT: Do not confuse SASL/PLAIN with PLAINTEXT
             # For more information, see: https://docs.confluent.io/current/kafka/authentication_sasl/authentication_sasl_plain.html#sasl-plain-overview)
-    kafka_server_conf_set sasl.mechanism.inter.broker.protocol PLAIN
-    kafka_producer_consumer_conf_set sasl.mechanism PLAIN
+            kafka_server_conf_set sasl.mechanism.inter.broker.protocol PLAIN
+            kafka_producer_consumer_conf_set sasl.mechanism PLAIN
         fi
         if [[ "$protocol" = "SASL_SSL" ]] || [[ "$protocol" = "SSL" ]]; then
             kafka_configure_ssl
@@ -532,15 +532,15 @@ docker_custom_init() {
     	if [ ! -f "/srv/data/${APP_NAME}/custom_init_flag" ]; then
             LOG_I "Process custom init scripts for ${APP_NAME}..."
 
-		# 检测目录权限，防止初始化失败
-    		ls "/srv/conf/${APP_NAME}/initdb.d/" > /dev/null
+            # 检测目录权限，防止初始化失败
+            ls "/srv/conf/${APP_NAME}/initdb.d/" > /dev/null
 
-		docker_process_init_files /srv/conf/${APP_NAME}/initdb.d/*
+            docker_process_init_files /srv/conf/${APP_NAME}/initdb.d/*
 
-    		echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." > /srv/data/${APP_NAME}/custom_init_flag
-    		LOG_I "Custom init for ${APP_NAME} complete."
-	else
-    		LOG_I "Custom init for ${APP_NAME} already done before, skipping initialization."
-    	fi
+            echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." > /srv/data/${APP_NAME}/custom_init_flag
+            LOG_I "Custom init for ${APP_NAME} complete."
+        else
+            LOG_I "Custom init for ${APP_NAME} already done before, skipping initialization."
+        fi
 	fi
 }
