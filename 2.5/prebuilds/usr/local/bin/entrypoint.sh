@@ -13,6 +13,8 @@ set -o pipefail
 
 . /usr/local/bin/appcommon.sh
 
+APP_DIRS="${APP_DEF_DIR:-} ${APP_HOME_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_WWW_DIR:-} ${APP_DATA_LOG_DIR:-}"; \
+
 # 加载环境变量, docker_app_env()函数在文件 app-common.sh 中定义
 eval "$(docker_app_env)"
 
@@ -31,14 +33,16 @@ docker_print_welcome
 docker_ensure_dir_and_configs() {
 	local user_id; user_id="$(id -u)"
 
-	for dir in ${APP_DEF_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_DATA_LOG_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_WWW_DIR:-}; do
+	for dir in ${APP_DIRS}; do
     	LOG_D "Check directory $dir"
     	ensure_dir_exists "$dir"
 	done
 
 	# 检测指定文件是否在配置文件存储目录存在，如果不存在则拷贝（新挂载数据卷、手动删除都会导致不存在）
 	LOG_D "Check config files"
+	if ! is_dir_empty ${APP_DEF_DIR}; then
 	ensure_config_file_exist ${APP_DEF_DIR}/*
+	fi
 }
 
 _main() {
@@ -63,7 +67,7 @@ _main() {
 			LOG_D "Change permissions when run as root"
 
 			# 以root用户启动时，修改相应目录的所属用户信息为APP_USER，确保切换用户时，权限正常
-			for dir in ${APP_DEF_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_DATA_LOG_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_WWW_DIR:-}; do
+			for dir in ${APP_DIRS}; do
     			LOG_D "Change ownership and permissions of $dir"
     			configure_permissions_ownership "$dir" -f 755 -d 755 -u "${APP_USER}" 
 			done

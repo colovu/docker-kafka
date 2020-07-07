@@ -83,7 +83,7 @@ download_dist() {
     if [ -n "$success" ]; then
         if [ -n "$package_sha256" ]; then
             echo "Verifying package whith sha256"
-            echo "$package_sha256  ${name}" | sha256sum --check -
+            echo "$package_sha256 *${name}" | sha256sum --check -
         fi
 
         if [ -n "$pgp_key" ]; then
