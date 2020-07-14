@@ -99,10 +99,10 @@ $ docker network create app-tier --driver bridge
 
 ```yaml
 services:
-	kafka1:
-		...
-		networks:
-    	- app-tier
+  kafka1:
+    ...
+    networks:
+      - app-tier
   ...
 ```
 
