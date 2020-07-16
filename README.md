@@ -9,6 +9,7 @@
 **版本信息**：
 
 - 2.5、2.5.0、latest （Scala 2.12）
+- 2.4、2.4.1 （Scala 2.12）
 - 2.3、2.3.1 （Scala 2.12）
 
 **镜像信息**
@@ -139,19 +140,19 @@ Kafka 镜像默认配置了用于应用配置的数据卷 `/srv/conf`及用于�
 生成并运行一个新的容器：
 
 ```shell
- docker run -d --name kafka1 -e KAFKA_ALLOW_PLAINTEXT_LISTENER=yes  colovu/kafka:latest
+ docker run -d --name kafka1 -e ALLOW_PLAINTEXT_LISTENER=yes  colovu/kafka:latest
 ```
 
 - `-d`: 使用服务方式启动容器
 - `--name kafka1`: 为当前容器命名
-- `-e KAFKA_ALLOW_PLAINTEXT_LISTENER=yes`: 设置默认允许任意用户登录（调试时使用，生产系统应当使用认证）
+- `-e ALLOW_PLAINTEXT_LISTENER=yes`: 设置默认允许任意用户登录（调试时使用，生产系统应当使用认证）
 
 
 
 使用数据卷映射生成并运行一个容器：
 
 ```shell
- $ docker run -d --name kafka1 -e KAFKA_ALLOW_PLAINTEXT_LISTENER=yes \
+ $ docker run -d --name kafka1 -e ALLOW_PLAINTEXT_LISTENER=yes \
   -v /host/dir/to/datalog:/srv/datalog \
   -v /host/dir/to/conf:/srv/conf \
   colovu/kafka:latest
@@ -180,7 +181,7 @@ $ docker run -d --name zoo1 -e ZOO_ALLOW_ANONYMOUS_LOGIN=yes \
 使用已定义网络`app-tier`，启动 Kafka 容器：
 
 ```shell
-$ docker run -d --name kafka1 -e KAFKA_ALLOW_PLAINTEXT_LISTENER=yes \
+$ docker run -d --name kafka1 -e ALLOW_PLAINTEXT_LISTENER=yes \
 	--network app-tier \
   -e KAFKA_CFG_ZOOKEEPER_CONNECT=zoo1:2181 \
 	colovu/kafka:latest
@@ -194,7 +195,7 @@ $ docker run -d --name kafka1 -e KAFKA_ALLOW_PLAINTEXT_LISTENER=yes \
 
 ```shell
 $ docker run -it --rm	--network app-tier \
-  -e KAFKA_ALLOW_PLAINTEXT_LISTENER=yes \
+  -e ALLOW_PLAINTEXT_LISTENER=yes \
   -e KAFKA_CFG_ZOOKEEPER_CONNECT=zoo1:2181 \
 	colovu/kafka:latest kafka-topics.sh --list  --zookeeper zoo1:2181
 ```
@@ -237,7 +238,7 @@ services:
       - '9092'
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_PLAINTEXT_LISTENER=yes
   myapp:
     image: 'other-app-img:tag'
     links:
@@ -381,7 +382,7 @@ services:
       - '9092:9092'
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_PLAINTEXT_LISTENER=yes
 ```
 
 
@@ -430,7 +431,7 @@ services:
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zoo1:2181
       - KAFKA_BROKER_ID=1
-      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
       - KAFKA_LISTENERS=INTERNAL://:9193,CLIENT://kafka1:9092
       - KAFKA_ADVERTISED_LISTENERS=INTERNAL://:9193,CLIENT://kafka1:9092
@@ -447,7 +448,7 @@ services:
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zoo1:2181
       - KAFKA_BROKER_ID=2
-      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
       - KAFKA_LISTENERS=INTERNAL://:9193,CLIENT://kafka2:9093
       - KAFKA_ADVERTISED_LISTENERS=INTERNAL://:9193,CLIENT://kafka2:9093
@@ -464,7 +465,7 @@ services:
     environment:
       - KAFKA_ZOOKEEPER_CONNECT=zoo1:2181
       - KAFKA_BROKER_ID=3
-      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
       - KAFKA_LISTENERS=INTERNAL://:9193,CLIENT://kafka3:9094
       - KAFKA_ADVERTISED_LISTENERS=INTERNAL://:9193,CLIENT://kafka3:9094
@@ -581,7 +582,7 @@ $ docker run -d -e "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181" --name kafka1 colovu
 
 默认值：**true**。设置是否自动创建 Topics。
 
-#### `KAFKA_ALLOW_PLAINTEXT_LISTENER`
+#### `ALLOW_PLAINTEXT_LISTENER`
 
 默认值：**no**。设置是否允许匿名登录。
 
@@ -818,7 +819,7 @@ services:
     ports:
       - '2181:2181'
     enviroment:
-      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+      - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - /host/path/to/conf:/srv/conf
 ```
@@ -850,7 +851,7 @@ $ docker-compose restart kafka1
 Kafka 镜像默认禁用了无密码访问功能，在实际生产环境中建议使用用户名及密码控制访问；如果为了测试需要，可以使用以下环境变量启用无密码访问功能：
 
 ```shell
-KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
+ALLOW_PLAINTEXT_LISTENER=yes
 ```
 
 
