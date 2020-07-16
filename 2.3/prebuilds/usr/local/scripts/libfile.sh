@@ -1,6 +1,10 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 #
 # 文件操作函数库
+
+# 加载依赖项
+. /usr/local/scripts/liblog.sh          # 日志输出函数库
 
 # 函数列表
 

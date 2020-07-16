@@ -1,4 +1,5 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 #
 # 日志处理函数库
 

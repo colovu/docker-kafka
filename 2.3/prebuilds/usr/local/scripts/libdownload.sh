@@ -1,4 +1,5 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 #
 # 从服务器（列表）下载相应软件包
 
