@@ -1,38 +1,42 @@
 #!/bin/bash
-#
+# Ver: 1.0 by Endial Fang (endial@126.com)
+# 
 # 应用通用业务处理函数
 
 # 加载依赖脚本
-. /usr/local/scripts/liblog.sh
+#. /usr/local/scripts/liblog.sh          # 日志输出函数库
+. /usr/local/scripts/libcommon.sh       # 通用函数库
 . /usr/local/scripts/libfile.sh
 . /usr/local/scripts/libfs.sh
-. /usr/local/scripts/libcommon.sh
+. /usr/local/scripts/libos.sh
+. /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
 
 # 函数列表
 
-# 加载应用使用的环境变量初始值，该函数在相关脚本中以eval方式调用
+# 加载应用使用的环境变量初始值，该函数在相关脚本中以 eval 方式调用
 # 全局变量:
 #   ENV_* : 容器使用的全局变量
-#   KAFKA_* : 应用配置文件使用的全局变量，变量名根据配置项定义
+#   APP_* : 在镜像创建时定义的全局变量
+#   *_* : 应用配置文件使用的全局变量，变量名根据配置项定义
 # 返回值:
 #   可以被 'eval' 使用的序列化输出
 docker_app_env() {
-	# 以下变量已经在创建镜像时定义，可直接使用
-	# APP_NAME、APP_EXEC、APP_USER、APP_GROUP、APP_VERSION
-	# APP_BASE_DIR、APP_DEF_DIR、APP_CONF_DIR、APP_CERT_DIR、APP_DATA_DIR、APP_CACHE_DIR、APP_RUN_DIR、APP_LOG_DIR
     cat <<"EOF"
-# Debug log message
+# Common Settings
 export ENV_DEBUG=${ENV_DEBUG:-false}
+export ALLOW_PLAINTEXT_LISTENER="${ALLOW_PLAINTEXT_LISTENER:-no}"
 
 # Paths
 export KAFKA_BASE_DIR="/usr/local/${APP_NAME}"
 export KAFKA_DATA_DIR="${APP_DATA_DIR}"
 export KAFKA_DATA_LOG_DIR="${APP_DATA_LOG_DIR}"
 export KAFKA_CONF_DIR="${APP_CONF_DIR}"
-export KAFKA_CONF_FILE="${KAFKA_CONF_DIR}/server.properties"
 export KAFKA_CERT_DIR="${APP_CERT_DIR}"
 export KAFKA_LOG_DIR="${APP_LOG_DIR}"
+
+export APP_CONF_FILE="${APP_CONF_DIR}/server.properties"
+export APP_PID_FILE="${APP_RUN_DIR}/${APP_NAME}.pid"
 
 # Zookeeper config
 export KAFKA_ZOOKEEPER_PASSWORD="${KAFKA_ZOOKEEPER_PASSWORD:-}"
@@ -84,7 +88,6 @@ export KAFKA_TRUSTSTORE_FILE="${KAFKA_TRUSTSTORE_FILE:-kafka.truststore.jks}"
 export KAFKA_CERTIFICATE_PASSWORD="${KAFKA_CERTIFICATE_PASSWORD:-}"
 
 # Authentication
-export KAFKA_ALLOW_PLAINTEXT_LISTENER="${KAFKA_ALLOW_PLAINTEXT_LISTENER:-no}"
 export KAFKA_CLIENT_USER="${KAFKA_CLIENT_USER:-colovu}"
 export KAFKA_CLIENT_PASSWORD="${KAFKA_CLIENT_PASSWORD:-pas4colovu}"
 export KAFKA_INTER_BROKER_USER="${KAFKA_INTER_BROKER_USER:-colovu}"
@@ -170,10 +173,10 @@ kafka_common_conf_set() {
         # Check if the value was set before
         if grep -q "^[#\\s]*$key\s*=.*" "$file"; then
             # Update the existing key
-            replace_in_file "$file" "^[#\\s]*${key}\s*=.*" "${key}=${value}" false
+            replace_in_file "$file" "^[#\\s]*${key}\s*=.*" "${key} = \'${value}\'" false
         else
-            # Add a new key
-            printf '\n%s=%s' "$key" "$value" >>"$file"
+            # 增加一个新的配置项；如果在其他位置有类似操作，需要注意换行
+            printf "%s = %s" "$key" "$value" >>"$file"
         fi
     fi
 }
@@ -209,84 +212,6 @@ kafka_producer_consumer_conf_set() {
     kafka_common_conf_set "$APP_CONF_DIR/consumer.properties" "$@"
 }
 
-# 检测用户参数信息是否满足条件
-# 针对部分权限过于开放情况，可打印提示信息
-app_verify_minimum_env() {
-    local error_code=0
-    local internal_port
-    local client_port
-    LOG_D "Validating settings in KAFKA_* env vars..."
-
-    # Auxiliary functions
-    print_validation_error() {
-        LOG_E "$1"
-        error_code=1
-    }
-
-    check_allowed_listener_port() {
-        local -r total="$#"
-        for i in $(seq 1 "$((total - 1))"); do
-            for j in $(seq "$((i + 1))" "$total"); do
-                if (( "${!i}" == "${!j}" )); then
-                    print_validation_error "There are listeners bound to the same port"
-                fi
-            done
-        done
-    }
-    check_conflicting_listener_ports() {
-        local validate_port_args=()
-        ! _is_run_as_root && validate_port_args+=("-unprivileged")
-        if ! err=$(validate_port "${validate_port_args[@]}" "$1"); then
-            print_validation_error "An invalid port was specified in the environment variable KAFKA_CFG_LISTENERS: $err"
-        fi
-    }
-
-    if [[ ${KAFKA_CFG_LISTENERS:-} =~ INTERNAL://:([0-9]*) ]]; then
-        internal_port="${BASH_REMATCH[1]}"
-        check_allowed_listener_port "$internal_port"
-    fi
-    if [[ ${KAFKA_CFG_LISTENERS:-} =~ CLIENT://:([0-9]*) ]]; then
-        client_port="${BASH_REMATCH[1]}"
-        check_allowed_listener_port "$client_port"
-    fi
-    [[ -n ${internal_port:-} && -n ${client_port:-} ]] && check_conflicting_listener_ports "$internal_port" "$client_port"
-    if [[ -n "${KAFKA_PORT_NUMBER:-}" ]] || [[ -n "${KAFKA_CFG_PORT:-}" ]]; then
-        LOG_W "The environment variables KAFKA_PORT_NUMBER and KAFKA_CFG_PORT are deprecated, you can specify the port number to use for each listener using the KAFKA_CFG_LISTENERS environment variable instead."
-    fi
-
-    if is_boolean_yes "$KAFKA_ALLOW_PLAINTEXT_LISTENER"; then
-        LOG_W "You have set the environment variable KAFKA_ALLOW_PLAINTEXT_LISTENER=$KAFKA_ALLOW_PLAINTEXT_LISTENER. For safety reasons, do not use this flag in a production environment."
-    fi
-    if [[ "${KAFKA_CFG_LISTENERS:-}" =~ SSL ]] || [[ "${KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:-}" =~ SSL ]]; then
-        # DEPRECATED. Check for jks files in old conf directory to maintain compatibility with Helm chart.
-        if ([[ ! -f "$APP_CERT_DIR/$KAFKA_KEYSTORE_FILE" ]] || [[ ! -f "$APP_CERT_DIR/$KAFKA_TRUSTSTORE_FILE" ]]) \
-            && ([[ ! -f "$APP_CERT_DIR/$KAFKA_KEYSTORE_FILE" ]] || [[ ! -f "$APP_CERT_DIR/$KAFKA_TRUSTSTORE_FILE" ]]); then
-            print_validation_error "In order to configure the TLS encryption for Kafka you must mount your kafka.keystore.jks and kafka.truststore.jks certificates to the ${KAFKA_CERT_DIR} directory."
-        fi
-    elif [[ "${KAFKA_CFG_LISTENERS:-}" =~ SASL ]] || [[ "${KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:-}" =~ SASL ]]; then
-        if [[ -z "$KAFKA_CLIENT_PASSWORD" ]] && [[ -z "$KAFKA_INTER_BROKER_PASSWORD" ]]; then
-            print_validation_error "In order to configure SASL authentication for Kafka, you must provide the SASL credentials. Set the environment variables KAFKA_CLIENT_USER and KAFKA_CLIENT_PASSWORD, to configure the credentials for SASL authentication with clients, or set the environment variables KAFKA_INTER_BROKER_USER and KAFKA_INTER_BROKER_PASSWORD, to configure the credentials for SASL authentication between brokers."
-        fi
-    elif ! is_boolean_yes "$KAFKA_ALLOW_PLAINTEXT_LISTENER"; then
-        print_validation_error "The KAFKA_CFG_LISTENERS environment variable does not configure a secure listener. Set the environment variable KAFKA_ALLOW_PLAINTEXT_LISTENER=yes to allow the container to be started with a plaintext listener. This is only recommended for development."
-    fi
-
-    [[ "$error_code" -eq 0 ]] || return "$error_code"
-}
-
-# 加载在后续脚本命令中使用的参数信息，包括从"*_FILE"文件中导入的配置
-# 必须在其他函数使用前调用
-docker_setup_env() {
-	# 尝试从文件获取环境变量的值
-	# file_env 'ENV_VAR_NAME'
-
-	# 尝试从文件获取环境变量的值，如果不存在，使用默认值 default_val 
-	# file_env 'ENV_VAR_NAME' 'default_val'
-
-	# 检测变量 ENV_VAR_NAME 未定义或值为空，赋值为默认值：default_val
-	# : "${ENV_VAR_NAME:=default_val}"
-    : 
-}
 
 # 设置环境变量 JVMFLAGS
 # 全局变量:
@@ -477,14 +402,165 @@ kafka_configure_from_environment_variables() {
     done
 }
 
+# 检测用户参数信息是否满足条件
+# 针对部分权限过于开放情况，可打印提示信息
+app_verify_minimum_env() {
+    local error_code=0
+
+    LOG_D "Validating settings in KAFKA_* env vars..."
+
+    print_validation_error() {
+        LOG_E "$1"
+        error_code=1
+    }
+
+    local internal_port
+    local client_port
+    check_allowed_listener_port() {
+        local -r total="$#"
+        for i in $(seq 1 "$((total - 1))"); do
+            for j in $(seq "$((i + 1))" "$total"); do
+                if (( "${!i}" == "${!j}" )); then
+                    print_validation_error "There are listeners bound to the same port"
+                fi
+            done
+        done
+    }
+    check_conflicting_listener_ports() {
+        local validate_port_args=()
+        ! _is_run_as_root && validate_port_args+=("-unprivileged")
+        if ! err=$(validate_port "${validate_port_args[@]}" "$1"); then
+            print_validation_error "An invalid port was specified in the environment variable KAFKA_CFG_LISTENERS: $err"
+        fi
+    }
+
+    if [[ ${KAFKA_CFG_LISTENERS:-} =~ INTERNAL://:([0-9]*) ]]; then
+        internal_port="${BASH_REMATCH[1]}"
+        check_allowed_listener_port "$internal_port"
+    fi
+    if [[ ${KAFKA_CFG_LISTENERS:-} =~ CLIENT://:([0-9]*) ]]; then
+        client_port="${BASH_REMATCH[1]}"
+        check_allowed_listener_port "$client_port"
+    fi
+    [[ -n ${internal_port:-} && -n ${client_port:-} ]] && check_conflicting_listener_ports "$internal_port" "$client_port"
+    if [[ -n "${KAFKA_PORT_NUMBER:-}" ]] || [[ -n "${KAFKA_CFG_PORT:-}" ]]; then
+        LOG_W "The environment variables KAFKA_PORT_NUMBER and KAFKA_CFG_PORT are deprecated, you can specify the port number to use for each listener using the KAFKA_CFG_LISTENERS environment variable instead."
+    fi
+
+    if is_boolean_yes "$ALLOW_PLAINTEXT_LISTENER"; then
+        LOG_W "You have set the environment variable ALLOW_PLAINTEXT_LISTENER=$ALLOW_PLAINTEXT_LISTENER. For safety reasons, do not use this flag in a production environment."
+    fi
+    if [[ "${KAFKA_CFG_LISTENERS:-}" =~ SSL ]] || [[ "${KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:-}" =~ SSL ]]; then
+        # DEPRECATED. Check for jks files in old conf directory to maintain compatibility with Helm chart.
+        if ([[ ! -f "$APP_CERT_DIR/$KAFKA_KEYSTORE_FILE" ]] || [[ ! -f "$APP_CERT_DIR/$KAFKA_TRUSTSTORE_FILE" ]]) \
+            && ([[ ! -f "$APP_CERT_DIR/$KAFKA_KEYSTORE_FILE" ]] || [[ ! -f "$APP_CERT_DIR/$KAFKA_TRUSTSTORE_FILE" ]]); then
+            print_validation_error "In order to configure the TLS encryption for Kafka you must mount your kafka.keystore.jks and kafka.truststore.jks certificates to the ${KAFKA_CERT_DIR} directory."
+        fi
+    elif [[ "${KAFKA_CFG_LISTENERS:-}" =~ SASL ]] || [[ "${KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:-}" =~ SASL ]]; then
+        if [[ -z "$KAFKA_CLIENT_PASSWORD" ]] && [[ -z "$KAFKA_INTER_BROKER_PASSWORD" ]]; then
+            print_validation_error "In order to configure SASL authentication for Kafka, you must provide the SASL credentials. Set the environment variables KAFKA_CLIENT_USER and KAFKA_CLIENT_PASSWORD, to configure the credentials for SASL authentication with clients, or set the environment variables KAFKA_INTER_BROKER_USER and KAFKA_INTER_BROKER_PASSWORD, to configure the credentials for SASL authentication between brokers."
+        fi
+    elif ! is_boolean_yes "$ALLOW_PLAINTEXT_LISTENER"; then
+        print_validation_error "The KAFKA_CFG_LISTENERS environment variable does not configure a secure listener. Set the environment variable ALLOW_PLAINTEXT_LISTENER=yes to allow the container to be started with a plaintext listener. This is only recommended for development."
+    fi
+
+    [[ "$error_code" -eq 0 ]] || exit "$error_code"
+}
+
+# 更改默认监听地址为 "*" 或 "0.0.0.0"，以对容器外提供服务；默认配置文件应当为仅监听 localhost(127.0.0.1)
+app_enable_remote_connections() {
+    LOG_D "Modify default config to enable all IP access"
+	
+}
+
+# 以后台方式启动应用服务，并等待启动就绪
+# 全局变量:
+#   ZOO_*
+#   ENV_DEBUG
+app_start_server_bg() {
+    is_app_server_running && return
+    LOG_I "Starting ${APP_NAME} in background..."
+
+    #local start_command="zkServer.sh start"
+    #if is_boolean_yes "${ENV_DEBUG}"; then
+    #    $start_command
+    #else
+    #    $start_command >/dev/null 2>&1
+    #fi
+
+    # 通过命令或特定端口检测应用是否就绪
+    LOG_I "Checking ${APP_NAME} ready status..."
+    # wait-for-port --timeout 60 "$ZOO_PORT_NUMBER"
+    LOG_D "${APP_NAME} is ready for service..."
+}
+
+# 停止应用服务
+# 全局变量:
+#   ZOO_*
+app_stop_server() {
+    LOG_I "Stopping ${APP_NAME}..."
+    
+    # 使用 PID 文件 kill 进程
+    stop_service_using_pid "$APP_PID_FILE"
+
+    # 使用命令关闭服务
+    #if [[ "$ENV_DEBUG" = true ]]; then
+    #    "zkServer.sh" stop
+    #else
+    #    "zkServer.sh" stop >/dev/null 2>&1
+    #fi
+}
+
+# 检测应用服务是否在后台运行中
+# 全局变量:
+#   ZOO_*
+# 返回值:
+#   布尔值
+is_app_server_running() {
+    local pid
+    pid="$(get_pid_from_file "${APP_PID_FILE}")"
+
+    if [[ -z "$pid" ]]; then
+        LOG_D "${APP_NAME} is Stopped..."
+        false
+    else
+        LOG_D "${APP_NAME} is Running..."
+        is_service_running "$pid"
+    fi
+}
+
+# 清理初始化应用时生成的临时文件
+app_clean_tmp_file() {
+    LOG_D "Clean ${APP_NAME} tmp files..."
+
+}
+
+# 在重新启动容器时，删除标志文件及必须删除的临时文件 (容器重新启动)
+# 全局变量:
+#   APP_*
+app_clean_from_restart() {
+    local -r -a files=(
+        "$APP_PID_FILE"
+    )
+
+    for file in "${files[@]}"; do
+        if [[ -f "$file" ]]; then
+            LOG_I "Cleaning stale $file file"
+            rm "$file"
+        fi
+    done
+}
+
 # 应用默认初始化操作
-# 执行完毕后，会在 /srv/data/${APP_NAME} 目录中生成custom_init_flag 及 data_init_flag 文件
+# 执行完毕后，生成文件 ${APP_CONF_DIR}/.app_init_flag 及 ${APP_DATA_DIR}/.data_init_flag 文件
 docker_app_init() {
+	app_clean_from_restart
     LOG_D "Check init status of ${APP_NAME}..."
 
     # 检测配置文件是否存在
-    if [[ ! -f "$APP_CONF_DIR/server.properties" || ! -f "/srv/data/${APP_NAME}/app_init_flag" ]]; then
+    if [[ ! -f "${APP_CONF_DIR}/.app_init_flag" ]]; then
         LOG_I "No injected configuration file found, creating default config files..."
+
         kafka_server_conf_set "log.dirs" "$KAFKA_CFG_LOG_DIRS"
         kafka_log4j_set "kafka.logs.dir" "${KAFKA_LOG_DIR}"
 
@@ -514,33 +590,94 @@ docker_app_init() {
         fi
         # Remove security.inter.broker.protocol if KAFKA_CFG_INTER_BROKER_LISTENER_NAME is configured
         if [[ -n "${KAFKA_CFG_INTER_BROKER_LISTENER_NAME:-}" ]]; then
-            remove_in_file "$KAFKA_CONF_FILE" "security.inter.broker.protocol" false
+            remove_in_file "$APP_CONF_FILE" "security.inter.broker.protocol" false
         fi
 
-        echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." > /srv/data/${APP_NAME}/app_init_flag
+        touch ${APP_CONF_DIR}/.app_init_flag
+        echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_CONF_DIR}/.app_init_flag
     else
         LOG_I "User injected custom configuration detected!"
+    fi
+
+    if [[ ! -f "${APP_DATA_DIR}/.data_init_flag" ]]; then
+        LOG_I "Deploying ${APP_NAME} from scratch..."
+        app_start_server_bg
+
+        # TODO: 根据需要生成相应初始化数据
+
+        touch ${APP_DATA_DIR}/.data_init_flag
+        echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_DATA_DIR}/.data_init_flag
+    else
+        LOG_I "Deploying ${APP_NAME} with persisted data..."
+    fi
+}
+
+# 用户自定义的前置初始化操作，依次执行目录 preinitdb.d 中的初始化脚本
+# 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_preinit_flag
+docker_custom_preinit() {
+    LOG_D "Check custom pre-init status of ${APP_NAME}..."
+
+    # 检测用户配置文件目录是否存在 preinitdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
+    if [ -d "/srv/conf/${APP_NAME}/preinitdb.d" ]; then
+        # 检测数据存储目录是否存在已初始化标志文件；如果不存在，检索可执行脚本文件并进行初始化操作
+        if [[ -n $(find "/srv/conf/${APP_NAME}/preinitdb.d/" -type f -regex ".*\.\(sh\)") ]] && \
+            [[ ! -f "${APP_DATA_DIR}/.custom_preinit_flag" ]]; then
+            LOG_I "Process custom pre-init scripts from /srv/conf/${APP_NAME}/preinitdb.d..."
+
+            # 检索所有可执行脚本，排序后执行
+            find "/srv/conf/${APP_NAME}/preinitdb.d/" -type f -regex ".*\.\(sh\)" | sort | docker_process_init_files
+
+            touch ${APP_DATA_DIR}/.custom_preinit_flag
+            echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_DATA_DIR}/.custom_preinit_flag
+            LOG_I "Custom preinit for ${APP_NAME} complete."
+        else
+            LOG_I "Custom preinit for ${APP_NAME} already done before, skipping initialization."
+        fi
     fi
 }
 
 # 用户自定义的应用初始化操作，依次执行目录initdb.d中的初始化脚本
-# 执行完毕后，会在 /srv/data/${APP_NAME} 目录中生成 custom_init_flag 文件
+# 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_init_flag
 docker_custom_init() {
-    # 检测用户配置文件目录是否存在initdb.d文件夹，如果存在，尝试执行目录中的初始化脚本
+    LOG_D "Check custom init status of ${APP_NAME}..."
+
+    # 检测用户配置文件目录是否存在 initdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
     if [ -d "/srv/conf/${APP_NAME}/initdb.d" ]; then
-    	# 检测数据存储目录是否存在已初始化标志文件；如果不存在，进行初始化操作
-    	if [ ! -f "/srv/data/${APP_NAME}/custom_init_flag" ]; then
-            LOG_I "Process custom init scripts for ${APP_NAME}..."
+    	# 检测数据存储目录是否存在已初始化标志文件；如果不存在，检索可执行脚本文件并进行初始化操作
+    	if [[ -n $(find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)") ]] && \
+            [[ ! -f "${APP_DATA_DIR}/.custom_init_flag" ]]; then
+            LOG_I "Process custom init scripts from /srv/conf/${APP_NAME}/initdb.d..."
 
-            # 检测目录权限，防止初始化失败
-            ls "/srv/conf/${APP_NAME}/initdb.d/" > /dev/null
+            app_start_server_bg
 
-            docker_process_init_files /srv/conf/${APP_NAME}/initdb.d/*
+            # 检索所有可执行脚本，排序后执行
+    		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)" | sort | while read -r f; do
+                case "$f" in
+                    *.sh)
+                        if [[ -x "$f" ]]; then
+                            LOG_D "Executing $f"; "$f"
+                        else
+                            LOG_D "Sourcing $f"; . "$f"
+                        fi
+                        ;;
+                    *)        LOG_D "Ignoring $f" ;;
+                esac
+            done
 
-            echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." > /srv/data/${APP_NAME}/custom_init_flag
-            LOG_I "Custom init for ${APP_NAME} complete."
-        else
-            LOG_I "Custom init for ${APP_NAME} already done before, skipping initialization."
-        fi
-	fi
+            touch ${APP_DATA_DIR}/.custom_init_flag
+    		echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_DATA_DIR}/.custom_init_flag
+    		LOG_I "Custom init for ${APP_NAME} complete."
+    	else
+    		LOG_I "Custom init for ${APP_NAME} already done before, skipping initialization."
+    	fi
+    fi
+
+    # 停止初始化时启动的后台服务
+	is_app_server_running && app_stop_server
+
+    # 删除第一次运行生成的临时文件
+    app_clean_tmp_file
+
+	# 绑定所有 IP ，启用远程访问
+    app_enable_remote_connections
 }

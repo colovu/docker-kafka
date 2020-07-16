@@ -1,11 +1,12 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 #
 # 服务管理函数库
 
 # shellcheck disable=SC1091
 
-# Load Generic Libraries
-. /usr/local/scripts/libvalidations.sh
+# 加载依赖项
+. /usr/local/scripts/liblog.sh          # 日志输出函数库
 
 # 函数列表
 

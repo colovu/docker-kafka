@@ -1,4 +1,5 @@
 #!/bin/bash
+# Ver: 1.1 by Endial Fang (endial@126.com)
 #
 
 # shellcheck disable=SC1091
@@ -6,7 +7,7 @@
 BOLD='\033[1m'
 
 # 加载依赖项
-. /usr/local/scripts/liblog.sh
+. /usr/local/scripts/liblog.sh          # 日志输出函数库
 
 # 函数列表
 
@@ -14,8 +15,9 @@ BOLD='\033[1m'
 # 全局变量:
 #   APP_NAME
 print_image_welcome_page() {
+    _is_restart && return
+
     local github_url="https://github.com/colovu/docker-${APP_NAME}"
-    if [ x"${WELCOME_MESSAGE:-}" = "x" ]; then
     LOG_I ""
     LOG_I "      ########  ########  ###       ########  ###   ##  ###   ##"
     LOG_I "     ###   ##  ###   ##  ###       ###   ##  ###   ##  ###   ##"
@@ -29,9 +31,6 @@ print_image_welcome_page() {
     LOG_I "Project on Github: ${BOLD}${github_url}${RESET}"
     LOG_I "Send us your feedback at ${BOLD}endial@126.com${RESET}"
     LOG_I ""
-
-        export WELCOME_MESSAGE=1
-    fi
 }
 
 # 根据需要打印欢迎信息
@@ -92,23 +91,27 @@ docker_process_init_files() {
 # 默认配置文件路径：/etc/${APP_NAME}
 # 目标配置文件路径：/srv/conf/${APP_NAME}
 # 参数：
-#   $* - 文件及目录列表字符串，以" "分割
+#   $1 - 基础路径
+#   $* - 基础路径下的文件及目录列表，以" "分割
 # 例子: 
-#   ensure_config_file_exist /etc/${APP_NAME}/*
+#   ensure_config_file_exist /etc/${APP_NAME} conf.d server.conf
 ensure_config_file_exist() {
-    local f
+    local -r base_path="${1:?paths is missing}"
+    local f=""
+    local dist=""
 
-    LOG_D "Parameter: $@"
+    shift 1
+    LOG_D "List to check: $@"
     while [ "$#" -gt 0 ]; do
         f="${1}"
-        LOG_D "Process ${f}"
-        if [ -d ${f} ]; then
-            dist="$(echo ${f} | sed -e 's/\/etc/\/srv\/conf/g')"
-            [ ! -d "${dist}" ] && LOG_I "Create directory: ${dist}" && mkdir -p "${dist}"
-            [[ ! -z $(ls -A "$f") ]] && ensure_config_file_exist ${f}/*
+        LOG_D "Process \"${f}\""
+        if [ -d "${base_path}/${f}" ]; then
+            dist="$(echo ${base_path}/${f} | sed -e 's/\/etc/\/srv\/conf/g')"
+            [[ ! -d "${dist}" ]] && LOG_I "Create directory: ${dist}" && mkdir -p "${dist}"
+            [[ ! -z $(ls -A "${base_path}/${f}") ]] && ensure_config_file_exist "${base_path}/${f}" $(ls -A "${base_path}/${f}")
         else
-            dist="$(echo ${f} | sed -e 's/\/etc/\/srv\/conf/g')"
-            [ ! -e "${dist}" ] && LOG_I "Copy: ${f} ===> ${dist}" && cp "${f}" "${dist}"
+            dist="$(echo ${base_path}/${f} | sed -e 's/\/etc/\/srv\/conf/g')"
+            [[ ! -e "${dist}" ]] && LOG_I "Copy: ${base_path}/${f} ===> ${dist}" && cp "${base_path}/${f}" "${dist}" && rm -rf "/srv/conf/${APP_NAME}/.app_init_flag"
         fi
         shift
     done
@@ -119,11 +122,19 @@ ensure_config_file_exist() {
 #   布尔值
 _is_run_as_root() {
     if [[ "$(id -u)" = "0" ]]; then
-        LOG_D "Run as root"
+        LOG_D "Check if run as root: Yes"
         true
     else
-        LOG_D "User id: $(id -u)"
+        LOG_D "Check if run as root: No (ID $(id -u))"
         false
+    fi
+}
+
+_is_restart() {
+    if [ x"${RESTART_FLAG:-}" = "x" ]; then
+        false
+    else
+        true
     fi
 }
 

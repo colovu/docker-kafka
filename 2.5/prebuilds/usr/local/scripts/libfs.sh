@@ -1,9 +1,10 @@
 #!/bin/bash
+# Ver: 1.1 by Endial Fang (endial@126.com)
 #
 # 文件管理函数库
 
 # 加载依赖项
-. /usr/local/scripts/liblog.sh
+. /usr/local/scripts/liblog.sh          # 日志输出函数库
 
 # 函数列表
 
@@ -93,24 +94,24 @@ configure_permissions_ownership() {
     read -r -a filepaths <<< "$paths"
     for p in "${filepaths[@]}"; do
         if [[ -e "$p" ]]; then
-            LOG_D "Check directory $p"
-            if [[ -n $dir_mode ]]; then
-                LOG_D "Change permissions to 755 of directories in $p"
-                find -L "$p" -type d -exec chmod "$dir_mode" '{}' +
+            LOG_D "Check $p"
+            if [[ -n ${dir_mode} ]]; then
+                LOG_D "Change permissions to ${dir_mode} of directories in $p"
+                find -L "$p" -type d -print | xargs -i chmod "${dir_mode}" '{}'
             fi
-            if [[ -n $file_mode ]]; then
-                LOG_D "Change permissions to 755 of files in $p"
-                find -L "$p" -type f -exec chmod "$file_mode" '{}' +
+            if [[ -n ${file_mode} ]]; then
+                LOG_D "Change permissions to ${file_mode} of files in $p"
+                find -L "$p" -type f -print | xargs -i chmod "${file_mode}" '{}'
             fi
-            if [[ -n $user ]] && [[ -n $group ]]; then
+            if [[ -n $user ]] && [[ -n ${group} ]]; then
                 LOG_D "Change ownership to ${user}:${group} of files and directories in $p"
-                find -L "$p" \! -user ${user} -or \! -group ${group} -exec chown -L "$user":"$group" '{}' +
+                find -L "$p" \( \! -user ${user} -or \! -group ${group} \) -print | xargs -i chown -L "${user}":"${group}" '{}'
             elif [[ -n $user ]] && [[ -z $group ]]; then
                 LOG_D "Change user to ${user} of files and directories in $p"
-                find -L "$p" \! -user ${user} -exec chown -L "$user" '{}' +
+                find -L "$p" \! -user ${user} -print | xargs -i chown -L "${user}" '{}'
             elif [[ -z $user ]] && [[ -n $group ]]; then
-                LOG_D "Change groupto ${group} of files and directories in $p"
-                find -L "$p" \! -group ${group} -exec chgrp -L "$group" '{}' +
+                LOG_D "Change group to ${group} of files and directories in $p"
+                find -L "$p" \! -group ${group} -print | xargs -i chgrp -L "${group}" '{}'
             fi
         else
             LOG_E "$p does not exist"

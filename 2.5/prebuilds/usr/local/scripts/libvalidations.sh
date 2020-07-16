@@ -1,9 +1,10 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 #
 # 数据有效性校验函数库
 
 # 加载依赖项
-. /usr/local/scripts/liblog.sh
+. /usr/local/scripts/liblog.sh          # 日志输出函数库
 
 # 函数列表
 

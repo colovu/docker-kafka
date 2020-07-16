@@ -1,22 +1,29 @@
 #!/bin/bash
+# Ver: 1.0 by Endial Fang (endial@126.com)
 # 
 # 容器入口脚本
 
+# 设置遇到执行错误则退出执行
 set -o errexit
+# 设置脚本遇到未初始化或声明的变量退出执行
 set -o nounset
+# 设置遇到管道命令失败则退出执行
 set -o pipefail
-# set -o xtrace # Uncomment this line for debugging purpose
+# 设置调试信息输出，及命令在执行前先打印命令执行前的命令内容
+# set -o xtrace
 
 # 加载依赖脚本
-. /usr/local/scripts/liblog.sh
-. /usr/local/scripts/libcommon.sh
+#. /usr/local/scripts/liblog.sh			# 日志输出函数库
+#. /usr/local/scripts/libcommon.sh		# 通用函数库
+. /usr/local/bin/appcommon.sh			# 应用专用函数库
 
-. /usr/local/bin/appcommon.sh
+LOG_D "Run entrypoint.sh for container init..."
 
-APP_DIRS="${APP_DEF_DIR:-} ${APP_HOME_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_WWW_DIR:-} ${APP_DATA_LOG_DIR:-}"; \
-
-# 加载环境变量, docker_app_env()函数在文件 app-common.sh 中定义
+# 初始化环境变量。 docker_app_env()函数在文件 appcommon.sh 中定义
 eval "$(docker_app_env)"
+
+# 定义容器中使用的默认目录(未定义时设置默认值为空"")
+APP_DIRS="${APP_DEF_DIR:-} ${APP_HOME_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_WWW_DIR:-} ${APP_DATA_LOG_DIR:-}"
 
 kafka_create_alias_environment_variables
 
@@ -30,35 +37,41 @@ fi
 docker_print_welcome
 
 # 检测数据卷，创建默认的关联目录，并拷贝所必须的默认配置文件及初始化文件
+# 全局变量：
+# 	APP_*
 docker_ensure_dir_and_configs() {
+    _is_restart && return
+
 	local user_id; user_id="$(id -u)"
 
+	LOG_D "Directories: ${APP_DIRS}"
 	for dir in ${APP_DIRS}; do
     	LOG_D "Check directory $dir"
     	ensure_dir_exists "$dir"
 	done
 
 	# 检测指定文件是否在配置文件存储目录存在，如果不存在则拷贝（新挂载数据卷、手动删除都会导致不存在）
-	LOG_D "Check config files"
-	if ! is_dir_empty ${APP_DEF_DIR}; then
-	ensure_config_file_exist ${APP_DEF_DIR}/*
+	LOG_D "Check config files..."
+	if [[ ! -z "$(ls -A "${APP_DEF_DIR}")" ]]; then
+		ensure_config_file_exist "${APP_DEF_DIR}" $(ls -A "${APP_DEF_DIR}")
 	fi
 }
 
 _main() {
+	# 替换命令行中的变量
+	set -- $(eval echo "$@")
+
 	# 如果命令行参数是以配置参数("-")开始，修改执行命令，确保使用可执行应用命令启动服务器
 	if [ "${1:0:1}" = '-' ]; then
 		set -- "${APP_EXEC}" "$@"
 	fi
 
 	# 命令行参数以可执行应用命令起始，且不包含直接返回的命令(如：-V、--version、--help)时，执行初始化操作
-	if [ "$1" = "${APP_EXEC}" ] && ! docker_command_help "$@"; then
-		# docker_setup_env
-		
-		# 检测 ENV_* KAFKA_* 环境变量是否有效
+	if [ "$1" = "${APP_EXEC}" ] && ! docker_command_help "$@"; then		
+		# 检测启动容器时设置的环境变量是否有效
 		app_verify_minimum_env
 
-		# 检测应用需要使用的目录是否存在，并设置相应用户权限
+		# 检测应用需要使用的目录及配置文件是否存在
 		docker_ensure_dir_and_configs
 
 		# 以root用户运行时，会使用gosu重新以"APP_USER"用户运行当前脚本
@@ -66,17 +79,21 @@ _main() {
 		if _is_run_as_root; then
 			LOG_D "Change permissions when run as root"
 
-			# 以root用户启动时，修改相应目录的所属用户信息为APP_USER，确保切换用户时，权限正常
+			# 以root用户启动时，修改相应目录的所属用户信息为 APP_USER ，确保切换用户时，权限正常
 			for dir in ${APP_DIRS}; do
     			LOG_D "Change ownership and permissions of $dir"
-    			configure_permissions_ownership "$dir" -f 755 -d 755 -u "${APP_USER}" 
+    			chmod 755 ${dir}
+    			configure_permissions_ownership "$dir" -u "${APP_USER}" -g "${APP_GROUP}"
 			done
 
 			# 解决使用gosu后，nginx: [emerg] open() "/dev/stdout" failed (13: Permission denied)
 			LOG_D "Change permissions of stdout/stderr to 0622"
 			chmod 0622 /dev/stdout /dev/stderr
 
+			LOG_I ""
 			LOG_I "Restart container with default user: ${APP_USER}"
+			LOG_I "  command: $@"
+	        export RESTART_FLAG=1
 			exec gosu "${APP_USER}" "$0" "$@"
 		fi
 		
@@ -87,8 +104,8 @@ _main() {
 		docker_custom_init
 	fi
 
-	LOG_I "Start container with: $@"
-	# 执行命令行
+	LOG_I "Start container with command: $@"
+	# 执行命令行。
 	exec "$@"
 }
 
