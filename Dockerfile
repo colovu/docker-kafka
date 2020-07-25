@@ -132,7 +132,6 @@ RUN set -eux; \
 	apt-get install -y --no-install-recommends ${appDeps}; \
 	\
 	\
-
 	\
 # 检测是否存在对应版本的 overrides 脚本文件；如果存在，执行
 	{ [ ! -e "/usr/local/overrides/overrides-${APP_VERSION}.sh" ] || /bin/bash "/usr/local/overrides/overrides-${APP_VERSION}.sh"; }; \
@@ -159,7 +158,6 @@ RUN set -eux; \
 	\
 # 验证安装的软件是否可以正常运行，常规情况下放置在命令行的最后
 	: ;
-
 
 VOLUME ["/srv/conf", "/srv/data", "/var/log", "/var/run"]
 
