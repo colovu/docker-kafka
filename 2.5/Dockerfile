@@ -63,8 +63,6 @@ RUN set -eux; \
 	\
 # 应用软件包及依赖项。相关软件包在镜像创建完成时，不会被清理
 	appDeps=" \
-		locales \
-		tzdata \
 	"; \
 	\
 	\
@@ -128,15 +126,6 @@ RUN set -eux; \
 	\
 	\
 	\
-# 为中国区使用重新配置 TimeZone 信息。需要安装 tzdata 软件包
-	ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime; \
-	dpkg-reconfigure -f noninteractive tzdata; \
-	\
-# 安装 UTF-8 编码。需要安装 locales 软件包
-	localedef -c -i en_US -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8; \
-	echo 'en_GB.UTF-8 UTF-8\nen_US.UTF-8 UTF-8' >> /etc/locale.gen && locale-gen; \
-	update-locale LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8 LC_ALL=en_US.UTF-8 LC_MESSAGES=POSIX && dpkg-reconfigure locales; \
-	\
 # 检测是否存在对应版本的 overrides 脚本文件；如果存在，执行
 	{ [ ! -e "/usr/local/overrides/overrides-${APP_VERSION}.sh" ] || /bin/bash "/usr/local/overrides/overrides-${APP_VERSION}.sh"; }; \
 	\
@@ -162,10 +151,6 @@ RUN set -eux; \
 	\
 # 验证安装的软件是否可以正常运行，常规情况下放置在命令行的最后
 	: ;
-
-ENV LANG=en_US.UTF-8 \
-	LANGUAGE=en_US.UTF-8 \
-	LC_ALL=en_US.UTF-8
 
 VOLUME ["/srv/conf", "/srv/data", "/var/log", "/var/run"]
 
