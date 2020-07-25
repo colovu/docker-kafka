@@ -8,7 +8,7 @@ FROM colovu/openjdk:11-jre
 ARG apt_source=default
 
 # 外部指定应用版本信息，如 "--build-arg app_ver=6.0.0"
-ARG app_ver=2.3.1
+ARG app_ver=2.5.0
 ARG scala_version=2.12
 
 # 编译镜像时指定本地服务器地址，如 "--build-arg local_url=http://172.29.14.108/dist-files/"
@@ -132,7 +132,6 @@ RUN set -eux; \
 	apt-get install -y --no-install-recommends ${appDeps}; \
 	\
 	\
-
 	\
 # 检测是否存在对应版本的 overrides 脚本文件；如果存在，执行
 	{ [ ! -e "/usr/local/overrides/overrides-${APP_VERSION}.sh" ] || /bin/bash "/usr/local/overrides/overrides-${APP_VERSION}.sh"; }; \
@@ -159,7 +158,6 @@ RUN set -eux; \
 	\
 # 验证安装的软件是否可以正常运行，常规情况下放置在命令行的最后
 	: ;
-
 
 VOLUME ["/srv/conf", "/srv/data", "/var/log", "/var/run"]
 
