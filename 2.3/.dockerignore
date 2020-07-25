@@ -3,3 +3,6 @@
 README.md
 LICENSE
 kafka-manager
+*.yml
+*.yaml
+img
