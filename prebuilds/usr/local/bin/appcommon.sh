@@ -173,7 +173,7 @@ kafka_common_conf_set() {
         # Check if the value was set before
         if grep -q "^[#\\s]*$key\s*=.*" "$file"; then
             # Update the existing key
-            replace_in_file "$file" "^[#\\s]*${key}\s*=.*" "${key} = \'${value}\'" false
+            replace_in_file "$file" "^[#\\s]*${key}\s*=.*" "${key} = ${value}" false
         else
             # 增加一个新的配置项；如果在其他位置有类似操作，需要注意换行
             printf "%s = %s" "$key" "$value" >>"$file"
