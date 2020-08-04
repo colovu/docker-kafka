@@ -12,4 +12,4 @@ echo "Add kafka.logs.dir to log4j.properties"
 sed -i -E 's/^log4j.rootLogger=*/kafka.logs.dir=.\nlog4j.rootLogger=/g' "$APP_DEF_DIR/log4j.properties"
 
 echo "Modify LOG_DIR defination in kafka-run-class.sh"
-sed -i -E 's/LOG_DIR/APP_LOG_DIR/g' "${APP_BASE_DIR}/bin/kafka-run-class.sh"
+sed -i -E 's/LOG_DIR/APP_LOG_DIR/g' "${APP_HOME_DIR}/bin/kafka-run-class.sh"

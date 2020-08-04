@@ -1,8 +1,12 @@
 .git
 .gitignore
-README.md
-LICENSE
-kafka-manager
+
+./alpine
+./Makefile
+
 *.yml
 *.yaml
-img
+
+./LICENSE
+./README.md
+./img

@@ -1,10 +1,14 @@
 version: '3.6'
 
+# Docker-Compose 单容器使用参考 YAML 配置文件
+# 更多配置参数请参考镜像 README.md 文档中说明
 services:
   zookeeper:
     image: 'colovu/zookeeper:latest'
+    ports:
+      - '2181:2181'
     environment:
-      - ZOO_ALLOW_ANONYMOUS_LOGIN=yes
+      - ALLOW_ANONYMOUS_LOGIN=yes
       - ZOO_LISTEN_ALLIPS_ENABLED=yes
 
   kafka:
@@ -12,8 +16,8 @@ services:
     ports:
       - '9092:9092'
     environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
       - KAFKA_LISTENERS=INTERNAL://:9093,CLIENT://:9092
       - KAFKA_ADVERTISED_LISTENERS=INTERNAL://:9093,CLIENT://:9092
