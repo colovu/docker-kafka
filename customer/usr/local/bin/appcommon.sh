@@ -4,13 +4,13 @@
 # 应用通用业务处理函数
 
 # 加载依赖脚本
-#. /usr/local/scripts/liblog.sh          # 日志输出函数库
 . /usr/local/scripts/libcommon.sh       # 通用函数库
 . /usr/local/scripts/libfile.sh
 . /usr/local/scripts/libfs.sh
 . /usr/local/scripts/libos.sh
 . /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
+. /usr/local/scripts/libnet.sh
 
 # 函数列表
 
@@ -28,25 +28,16 @@ export ENV_DEBUG=${ENV_DEBUG:-false}
 export ALLOW_PLAINTEXT_LISTENER="${ALLOW_PLAINTEXT_LISTENER:-no}"
 
 # Paths
-export KAFKA_BASE_DIR="/usr/local/${APP_NAME}"
-export KAFKA_DATA_DIR="${APP_DATA_DIR}"
-export KAFKA_DATA_LOG_DIR="${APP_DATA_LOG_DIR}"
-export KAFKA_CONF_DIR="${APP_CONF_DIR}"
-export KAFKA_CERT_DIR="${APP_CERT_DIR}"
-export KAFKA_LOG_DIR="${APP_LOG_DIR}"
-
 export APP_CONF_FILE="${APP_CONF_DIR}/server.properties"
 export APP_PID_FILE="${APP_RUN_DIR}/${APP_NAME}.pid"
 
 # Zookeeper config
 export KAFKA_ZOOKEEPER_PASSWORD="${KAFKA_ZOOKEEPER_PASSWORD:-}"
 export KAFKA_ZOOKEEPER_USER="${KAFKA_ZOOKEEPER_USER:-}"
-export KAFKA_ZOOKEEPER_CONNECT="${KAFKA_ZOOKEEPER_CONNECT:-"localhost:2181"}"
+export KAFKA_ZOOKEEPER_CONNECT="${KAFKA_ZOOKEEPER_CONNECT:-"zookeeper:2181"}"
 export KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS="${KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS:-6000}"
 
 # Users
-export KAFKA_DAEMON_USER="${APP_USER}"
-export KAFKA_DAEMON_GROUP="${APP_GROUP}"
 
 # Cluster configuration
 export KAFKA_BROKER_ID="${KAFKA_BROKER_ID:-1}"
@@ -70,17 +61,18 @@ export KAFKA_NUM_IO_THREADS="${KAFKA_NUM_IO_THREADS:-8}"
 export KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS="${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS:-0}"
 
 # Log Settings
-export KAFKA_LOG_DIRS="${KAFKA_LOG_DIRS:-${KAFKA_DATA_LOG_DIR}}"
+export KAFKA_LOG_DIRS="${KAFKA_LOG_DIRS:-${APP_DATA_LOG_DIR}}"
 export KAFKA_LOG_SEGMENT_BYTES="${KAFKA_LOG_SEGMENT_BYTES:-1073741824}"
 export KAFKA_LOG_FLUSH_INTERVAL_MESSAGES="${KAFKA_LOG_FLUSH_INTERVAL_MESSAGES:-10000}"
 export KAFKA_LOG_FLUSH_INTERVAL_MS="${KAFKA_LOG_FLUSH_INTERVAL_MS:-1000}"
 export KAFKA_LOG_RETENTION_HOURS="${KAFKA_LOG_RETENTION_HOURS:-168}"
 export KAFKA_LOG_RETENTION_BYTES="${KAFKA_LOG_RETENTION_BYTES:-1073741824}"
 export KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS="${KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS:-300000}"
+export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:${APP_CONF_DIR}/log4j.properties"
 
 # Java Settings
-export JVMFLAGS="${ZOO_JVMFLAGS:-}"
-export KAFKA_HEAP_SIZE="${KAFKA_HEAP_SIZE:-1024}"
+export JVMFLAGS="${JVMFLAGS:-}"
+export HEAP_SIZE="${HEAP_SIZE:-1024}"
 
 # SSL Settings
 export KAFKA_KEYSTORE_FILE="${KAFKA_KEYSTORE_FILE:-kafka.keystore.jks}"
@@ -176,7 +168,7 @@ kafka_common_conf_set() {
             replace_in_file "$file" "^[#\\s]*${key}\s*=.*" "${key}=${value}" false
         else
             # 增加一个新的配置项；如果在其他位置有类似操作，需要注意换行
-            printf "%s=%s" "$key" "$value" >>"$file"
+            printf "\n%s=%s" "$key" "$value" >>"$file"
         fi
     fi
 }
@@ -188,7 +180,7 @@ kafka_common_conf_set() {
 #   $1 - 变量
 #   $2 - 值（列表）
 kafka_log4j_set() {
-    kafka_common_conf_set "$APP_CONF_DIR/log4j.properties" "$@"
+    kafka_common_conf_set "${APP_CONF_DIR}/log4j.properties" "$@"
 }
 
 # 更新 server.properties 配置文件中指定变量值
@@ -198,7 +190,7 @@ kafka_log4j_set() {
 #   $1 - 变量
 #   $2 - 值（列表）
 kafka_server_conf_set() {
-    kafka_common_conf_set "$APP_CONF_DIR/server.properties" "$@"
+    kafka_common_conf_set "${APP_CONF_DIR}/server.properties" "$@"
 }
 
 # 更新 producer.properties 及 consumer.properties 配置文件中指定变量值
@@ -208,8 +200,8 @@ kafka_server_conf_set() {
 #   $1 - 变量
 #   $2 - 值（列表）
 kafka_producer_consumer_conf_set() {
-    kafka_common_conf_set "$APP_CONF_DIR/producer.properties" "$@"
-    kafka_common_conf_set "$APP_CONF_DIR/consumer.properties" "$@"
+    kafka_common_conf_set "${APP_CONF_DIR}/producer.properties" "$@"
+    kafka_common_conf_set "${APP_CONF_DIR}/consumer.properties" "$@"
 }
 
 
@@ -222,7 +214,7 @@ kafka_export_jvmflags() {
     local -r value="${1:?value is required}"
 
     export JVMFLAGS="${JVMFLAGS} ${value}"
-    echo "export JVMFLAGS=\"${JVMFLAGS}\"" > "${KAFKA_CONF_DIR}/java.env"
+    echo "export JVMFLAGS=\"${JVMFLAGS}\"" > "${APP_CONF_DIR}/java.env"
 }
 
 # 配置 HEAP 大小
@@ -248,10 +240,10 @@ kafka_generate_jaas_authentication_file() {
     local -r internal_protocol="${1:-}"
     local -r client_protocol="${2:-}"
 
-    if [[ ! -f "${KAFKA_CONF_DIR}/kafka_jaas.conf" ]]; then
+    if [[ ! -f "${APP_CONF_DIR}/kafka_jaas.conf" ]]; then
         LOG_I "Generating JAAS authentication file"
         if [[ "${client_protocol:-}" =~ SASL ]]; then
-            cat >> "${KAFKA_CONF_DIR}/kafka_jaas.conf" <<EOF
+            cat >> "${APP_CONF_DIR}/kafka_jaas.conf" <<EOF
 KafkaClient {
    org.apache.kafka.common.security.plain.PlainLoginModule required
    username="${KAFKA_CLIENT_USER:-}"
@@ -260,7 +252,7 @@ KafkaClient {
 EOF
         fi
         if [[ "${client_protocol:-}" =~ SASL ]] && [[ "${internal_protocol:-}" =~ SASL ]]; then
-            cat >> "${KAFKA_CONF_DIR}/kafka_jaas.conf" <<EOF
+            cat >> "${APP_CONF_DIR}/kafka_jaas.conf" <<EOF
 KafkaServer {
    org.apache.kafka.common.security.plain.PlainLoginModule required
    username="${KAFKA_INTER_BROKER_USER:-}"
@@ -272,7 +264,7 @@ KafkaServer {
    };
 EOF
         elif [[ "${client_protocol:-}" =~ SASL ]]; then
-            cat >> "${KAFKA_CONF_DIR}/kafka_jaas.conf" <<EOF
+            cat >> "${APP_CONF_DIR}/kafka_jaas.conf" <<EOF
 KafkaServer {
    org.apache.kafka.common.security.plain.PlainLoginModule required
    user_${KAFKA_CLIENT_USER:-}="${KAFKA_CLIENT_PASSWORD:-}";
@@ -281,7 +273,7 @@ KafkaServer {
    };
 EOF
         elif [[ "${internal_protocol:-}" =~ SASL ]]; then
-            cat >> "${KAFKA_CONF_DIR}/kafka_jaas.conf" <<EOF
+            cat >> "${APP_CONF_DIR}/kafka_jaas.conf" <<EOF
 KafkaServer {
    org.apache.kafka.common.security.plain.PlainLoginModule required
    username="${KAFKA_INTER_BROKER_USER:-}"
@@ -293,7 +285,7 @@ KafkaServer {
 EOF
         fi
         if [[ -n "$KAFKA_ZOOKEEPER_USER" ]] && [[ -n "$KAFKA_ZOOKEEPER_PASSWORD" ]]; then
-            cat >> "${KAFKA_CONF_DIR}/kafka_jaas.conf" <<EOF
+            cat >> "${APP_CONF_DIR}/kafka_jaas.conf" <<EOF
 Client {
    org.apache.kafka.common.security.plain.PlainLoginModule required
    username="${KAFKA_ZOOKEEPER_USER:-}"
@@ -454,7 +446,7 @@ app_verify_minimum_env() {
         # DEPRECATED. Check for jks files in old conf directory to maintain compatibility with Helm chart.
         if ([[ ! -f "$APP_CERT_DIR/$KAFKA_KEYSTORE_FILE" ]] || [[ ! -f "$APP_CERT_DIR/$KAFKA_TRUSTSTORE_FILE" ]]) \
             && ([[ ! -f "$APP_CERT_DIR/$KAFKA_KEYSTORE_FILE" ]] || [[ ! -f "$APP_CERT_DIR/$KAFKA_TRUSTSTORE_FILE" ]]); then
-            print_validation_error "In order to configure the TLS encryption for Kafka you must mount your kafka.keystore.jks and kafka.truststore.jks certificates to the ${KAFKA_CERT_DIR} directory."
+            print_validation_error "In order to configure the TLS encryption for Kafka you must mount your kafka.keystore.jks and kafka.truststore.jks certificates to the ${APP_CERT_DIR} directory."
         fi
     elif [[ "${KAFKA_CFG_LISTENERS:-}" =~ SASL ]] || [[ "${KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP:-}" =~ SASL ]]; then
         if [[ -z "$KAFKA_CLIENT_PASSWORD" ]] && [[ -z "$KAFKA_INTER_BROKER_PASSWORD" ]]; then
@@ -476,7 +468,6 @@ app_enable_remote_connections() {
 # 以后台方式启动应用服务，并等待启动就绪
 # 全局变量:
 #   ZOO_*
-#   ENV_DEBUG
 app_start_server_bg() {
     is_app_server_running && return
     LOG_I "Starting ${APP_NAME} in background..."
@@ -488,22 +479,24 @@ app_start_server_bg() {
     #    $start_command >/dev/null 2>&1
     #fi
 
-    # 通过命令或特定端口检测应用是否就绪
+	# 通过命令或特定端口检测应用是否就绪
     LOG_I "Checking ${APP_NAME} ready status..."
     # wait-for-port --timeout 60 "$ZOO_PORT_NUMBER"
+
     LOG_D "${APP_NAME} is ready for service..."
 }
 
 # 停止应用服务
 # 全局变量:
-#   ZOO_*
+#   APP_*
 app_stop_server() {
+    is_app_server_running || return
     LOG_I "Stopping ${APP_NAME}..."
     
     # 使用 PID 文件 kill 进程
     stop_service_using_pid "$APP_PID_FILE"
 
-    # 使用命令关闭服务
+    # 使用内置脚本关闭服务
     #if [[ "$ENV_DEBUG" = true ]]; then
     #    "zkServer.sh" stop
     #else
@@ -517,21 +510,20 @@ app_stop_server() {
 # 返回值:
 #   布尔值
 is_app_server_running() {
+    LOG_D "Check if ${APP_NAME} is running..."
     local pid
     pid="$(get_pid_from_file "${APP_PID_FILE}")"
 
-    if [[ -z "$pid" ]]; then
-        LOG_D "${APP_NAME} is Stopped..."
+    if [[ -z "${pid}" ]]; then
         false
     else
-        LOG_D "${APP_NAME} is Running..."
-        is_service_running "$pid"
+        is_service_running "${pid}"
     fi
 }
 
 # 清理初始化应用时生成的临时文件
 app_clean_tmp_file() {
-    LOG_D "Clean ${APP_NAME} tmp files..."
+    LOG_D "Clean ${APP_NAME} tmp files for init..."
 
 }
 
@@ -539,11 +531,12 @@ app_clean_tmp_file() {
 # 全局变量:
 #   APP_*
 app_clean_from_restart() {
+    LOG_D "Clean ${APP_NAME} tmp files for restart..."
     local -r -a files=(
-        "$APP_PID_FILE"
+        "${APP_PID_FILE}"
     )
 
-    for file in "${files[@]}"; do
+    for file in ${files[@]}; do
         if [[ -f "$file" ]]; then
             LOG_I "Cleaning stale $file file"
             rm "$file"
@@ -562,11 +555,11 @@ docker_app_init() {
         LOG_I "No injected configuration file found, creating default config files..."
 
         kafka_server_conf_set "log.dirs" "$KAFKA_CFG_LOG_DIRS"
-        kafka_log4j_set "kafka.logs.dir" "${KAFKA_LOG_DIR}"
+        kafka_log4j_set "kafka.logs.dir" "${APP_LOG_DIR}"
 
-        #export LOG_DIR=${KAFKA_LOG_DIR}
+        #export LOG_DIR=${APP_LOG_DIR}
         kafka_configure_from_environment_variables
-        #kafka_configure_heap_size "$KAFKA_HEAP_SIZE"
+        #kafka_configure_heap_size "$HEAP_SIZE"
 
         # 当配置 Kafka 为有多个 broker 的集群时，有以下几种监听器：
         # - INTERNAL: 用于 broker 内通讯
@@ -601,7 +594,9 @@ docker_app_init() {
 
     if [[ ! -f "${APP_DATA_DIR}/.data_init_flag" ]]; then
         LOG_I "Deploying ${APP_NAME} from scratch..."
-        app_start_server_bg
+
+		# 检测服务是否运行中如果未运行，则启动后台服务
+        is_app_server_running || app_start_server_bg
 
         # TODO: 根据需要生成相应初始化数据
 
@@ -648,7 +643,8 @@ docker_custom_init() {
             [[ ! -f "${APP_DATA_DIR}/.custom_init_flag" ]]; then
             LOG_I "Process custom init scripts from /srv/conf/${APP_NAME}/initdb.d..."
 
-            app_start_server_bg
+            # 检测服务是否运行中；如果未运行，则启动后台服务
+            is_app_server_running || app_start_server_bg
 
             # 检索所有可执行脚本，排序后执行
     		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)" | sort | while read -r f; do
@@ -672,7 +668,7 @@ docker_custom_init() {
     	fi
     fi
 
-    # 停止初始化时启动的后台服务
+    # 检测服务是否运行中；如果运行，则停止后台服务
 	is_app_server_running && app_stop_server
 
     # 删除第一次运行生成的临时文件
