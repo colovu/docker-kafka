@@ -17,13 +17,13 @@ set -o pipefail
 #. /usr/local/scripts/libcommon.sh		# 通用函数库
 . /usr/local/bin/appcommon.sh			# 应用专用函数库
 
-LOG_D "Run entrypoint.sh for container init..."
+LOG_D "Process entrypoint.sh..."
 
 # 初始化环境变量。 docker_app_env()函数在文件 appcommon.sh 中定义
 eval "$(docker_app_env)"
 
 # 定义容器中使用的默认目录(未定义时设置默认值为空"")
-APP_DIRS="${APP_DEF_DIR:-} ${APP_HOME_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_WWW_DIR:-} ${APP_DATA_LOG_DIR:-}"
+APP_DIRS="${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_DATA_LOG_DIR:-}"
 
 kafka_create_alias_environment_variables
 
@@ -36,7 +36,7 @@ fi
 # 打印镜像欢迎信息
 docker_print_welcome
 
-# 检测数据卷，创建默认的关联目录，并拷贝所必须的默认配置文件及初始化文件
+# 检测数据卷中相关目录，创建默认的关联目录，并拷贝所必须的默认配置文件及初始化文件
 # 全局变量：
 # 	APP_*
 docker_ensure_dir_and_configs() {
@@ -44,9 +44,9 @@ docker_ensure_dir_and_configs() {
 
 	local user_id; user_id="$(id -u)"
 
-	LOG_D "Directories: ${APP_DIRS}"
+	LOG_D "Check directories..."
 	for dir in ${APP_DIRS}; do
-    	LOG_D "Check directory $dir"
+    	LOG_D "  Check $dir"
     	ensure_dir_exists "$dir"
 	done
 
@@ -74,16 +74,15 @@ _main() {
 		# 检测应用需要使用的目录及配置文件是否存在
 		docker_ensure_dir_and_configs
 
-		# 以root用户运行时，会使用gosu重新以"APP_USER"用户运行当前脚本
-		LOG_D "Check if run as root"
+		# 以root用户运行时，会使用gosu重新以"APP_NAME"用户运行当前脚本
 		if _is_run_as_root; then
 			LOG_D "Change permissions when run as root"
 
-			# 以root用户启动时，修改相应目录的所属用户信息为 APP_USER ，确保切换用户时，权限正常
+			# 以root用户启动时，修改相应目录的所属用户信息为 APP_NAME ，确保切换用户时，权限正常
 			for dir in ${APP_DIRS}; do
-    			LOG_D "Change ownership and permissions of $dir"
     			chmod 755 ${dir}
-    			configure_permissions_ownership "$dir" -u "${APP_USER}" -g "${APP_GROUP}"
+    			configure_permissions_ownership "$dir" -u "${APP_NAME}" -g "${APP_NAME}"
+				:
 			done
 
 			# 解决使用gosu后，nginx: [emerg] open() "/dev/stdout" failed (13: Permission denied)
@@ -91,10 +90,10 @@ _main() {
 			chmod 0622 /dev/stdout /dev/stderr
 
 			LOG_I ""
-			LOG_I "Restart container with default user: ${APP_USER}"
+			LOG_I "Restart container with default user: ${APP_NAME}"
 			LOG_I "  command: $@"
 	        export RESTART_FLAG=1
-			exec gosu "${APP_USER}" "$0" "$@"
+			exec gosu "${APP_NAME}" "$0" "$@"
 		fi
 		
 		# 执行应用初始化操作

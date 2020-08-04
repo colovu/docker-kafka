@@ -16,13 +16,10 @@ ARG local_url=""
 
 # 定义应用基础常量信息，该常量在容器内可使用
 ENV APP_NAME=kafka \
-	APP_EXEC=kafka-server-start.sh \
-	APP_USER=kafka \
-	APP_GROUP=kafka \
-	APP_VERSION=${app_ver}
+	APP_EXEC=kafka-server-start.sh
 
 # 定义应用基础目录信息，该常量在容器内可使用
-ENV	APP_BASE_DIR=/usr/local/${APP_NAME} \
+ENV	APP_HOME_DIR=/usr/local/${APP_NAME} \
 	APP_DEF_DIR=/etc/${APP_NAME} \
 	APP_CONF_DIR=/srv/conf/${APP_NAME} \
 	APP_DATA_DIR=/srv/data/${APP_NAME} \
@@ -30,47 +27,44 @@ ENV	APP_BASE_DIR=/usr/local/${APP_NAME} \
 	APP_CACHE_DIR=/var/cache/${APP_NAME} \
 	APP_RUN_DIR=/var/run/${APP_NAME} \
 	APP_LOG_DIR=/var/log/${APP_NAME} \
-	APP_CERT_DIR=/srv/cert/${APP_NAME} \
-	APP_WWW_DIR=/srv/www
+	APP_CERT_DIR=/srv/cert/${APP_NAME}
 
 # 设置应用需要的特定环境变量
-ENV KAFKA_VERSION=${app_ver} \
-	SCALA_VERSION=${scala_version} \
-	KAFKA_HOME=${APP_BASE_DIR} \
-	PATH="${APP_BASE_DIR}/bin:${PATH}"
+ENV KAFKA_HOME=${APP_BASE_DIR} \
+	PATH="${APP_HOME_DIR}/bin:${PATH}"
 
 LABEL \
-	"Version"="v${APP_VERSION}" \
-	"Description"="Docker image for ${APP_NAME} ${APP_VERSION} (scala: ${scala_version})." \
+	"Version"="v${app_ver}" \
+	"Description"="Docker image for ${APP_NAME} ${app_ver} (scala: ${scala_version})." \
 	"Dockerfile"="https://github.com/colovu/docker-${APP_NAME}" \
 	"Vendor"="Endial Fang (endial@126.com)"
 
 # 拷贝默认 Shell 脚本至容器相关目录中
 COPY prebuilds /
 
-# 镜像内应用安装脚本
-# 以下脚本可按照不同需求拆分为多个段，但需要注意各个段在结束前需要清空缓存
-# set -eux: 设置 shell 执行参数，分别为 -e(命令执行错误则退出脚本) -u(变量未定义则报错) -x(打印实际待执行的命令行)
-RUN set -eux; \
-	\
-# 设置程序使用静默安装，而非交互模式；类似tzdata等程序需要使用静默安装
+# 镜像内相应应用及依赖软件包的安装脚本；以下脚本可按照不同需求拆分为多个段，但需要注意各个段在结束前需要清空缓存
+RUN \
+# 设置程序使用静默安装，而非交互模式；默认情况下，类似 tzdata/gnupg/ca-certificates 等程序配置需要交互
 	export DEBIAN_FRONTEND=noninteractive; \
 	\
-# 设置容器入口脚本的可执行权限
-	chmod +x /usr/local/bin/entrypoint.sh; \
+# 设置 shell 执行参数，分别为 -e(命令执行错误则退出脚本) -u(变量未定义则报错) -x(打印实际待执行的命令行)
+	set -eux; \
 	\
 # 更改源为当次编译指定的源
 	cp /etc/apt/sources.list.${apt_source} /etc/apt/sources.list; \
 	\
 # 为应用创建对应的组、用户、相关目录
-	APP_DIRS="${APP_DEF_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_WWW_DIR:-} ${APP_DATA_LOG_DIR:-} ${APP_BASE_DIR:-${APP_DATA_DIR}}"; \
+	export KAFKA_VERSION=${app_ver}; \
+	export SCALA_VERSION=${scala_version}; \
+	export APP_DIRS="${APP_DEF_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_DATA_LOG_DIR:-} ${APP_HOME_DIR:-${APP_DATA_DIR}}"; \
 	mkdir -p ${APP_DIRS}; \
-	groupadd -r -g 998 ${APP_GROUP}; \
-	useradd -r -g ${APP_GROUP} -u 999 -s /usr/sbin/nologin -d ${APP_DATA_DIR} ${APP_USER}; \
+	groupadd -r -g 998 ${APP_NAME}; \
+	useradd -r -g ${APP_NAME} -u 999 -s /usr/sbin/nologin -d ${APP_DATA_DIR} ${APP_NAME}; \
 	\
 # 应用软件包及依赖项。相关软件包在镜像创建完成时，不会被清理
 	appDeps=" \
 	"; \
+	savedAptMark="$(apt-mark showmanual) ${appDeps}"; \
 	\
 	\
 	\
@@ -81,7 +75,6 @@ RUN set -eux; \
 		dirmngr \
 		gnupg \
 	"; \
-	savedAptMark="$(apt-mark showmanual) ${appDeps}"; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends ${fetchDeps}; \
 	\
@@ -121,9 +114,9 @@ RUN set -eux; \
 	\
 	\
 	\
-# 二进制解压安装，并将原始配置文件拷贝至 ${APP_DEF_DIR} 中
-	tar --extract --file "${DIST_NAME}" --directory "${APP_BASE_DIR}" --strip-components 1; \
-	cp -rf ${APP_BASE_DIR}/config/* "${APP_DEF_DIR}/"; \
+# 二进制解压方式安装: 解压后将原始配置文件拷贝至 ${APP_DEF_DIR} 中
+	tar --extract --file "${DIST_NAME}" --directory "${APP_HOME_DIR}" --strip-components 1; \
+	cp -rf ${APP_HOME_DIR}/config/* "${APP_DEF_DIR}/"; \
 	rm -rf "${DIST_NAME}"; \
 	\
 	\
@@ -133,12 +126,8 @@ RUN set -eux; \
 	\
 	\
 	\
-# 检测是否存在对应版本的 overrides 脚本文件；如果存在，执行
-	{ [ ! -e "/usr/local/overrides/overrides-${APP_VERSION}.sh" ] || /bin/bash "/usr/local/overrides/overrides-${APP_VERSION}.sh"; }; \
-	\
-# 设置应用关联目录的权限信息，设置为'777'是为了保证后续使用`--user`或`gosu`时，可以更改目录对应的用户属性信息；运行时会被更改为'700'或'755'
-	chown -Rf ${APP_USER}:${APP_GROUP} ${APP_DIRS}; \
-	chmod 777 ${APP_DIRS}; \
+# 设置应用关联目录的权限信息
+	chown -Rf ${APP_NAME}:${APP_NAME} ${APP_DIRS}; \
 	\
 # 查找新安装的应用及应用依赖软件包，并标识为'manual'，防止后续自动清理时被删除
 	apt-mark auto '.*' > /dev/null; \
@@ -155,17 +144,31 @@ RUN set -eux; \
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false ${fetchDeps}; \
 	apt-get autoclean -y; \
 	rm -rf /var/lib/apt/lists/*; \
+	:;
+
+# 拷贝应用专用 Shell 脚本至容器相关目录中
+COPY customer /
+
+RUN set -eux; \
+# 设置容器入口脚本的可执行权限
+	chmod +x /usr/local/bin/entrypoint.sh; \
+	\
+# 检测是否存在对应版本的 overrides 脚本文件；如果存在，执行
+	{ [ ! -e "/usr/local/overrides/overrides-${app_ver}.sh" ] || /bin/bash "/usr/local/overrides/overrides-${app_ver}.sh"; }; \
 	\
 # 验证安装的软件是否可以正常运行，常规情况下放置在命令行的最后
-	: ;
+	:;
 
-VOLUME ["/srv/conf", "/srv/data", "/var/log", "/var/run"]
+# 默认提供的数据卷
+VOLUME ["/srv/conf", "/srv/data", "/srv/cert", "/srv/datalog", "/var/log"]
 
 # 默认使用gosu切换为新建用户启动，必须保证端口在1024之上
 EXPOSE 9092
 
 # 容器初始化命令，默认存放在：/usr/local/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
+
+WORKDIR ${APP_DATA_DIR}
 
 # 应用程序的服务命令，必须使用非守护进程方式运行。如果使用变量，则该变量必须在运行环境中存在（ENV可以获取）
 CMD ["${APP_EXEC}", "${APP_CONF_FILE}" ]
