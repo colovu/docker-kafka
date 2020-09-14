@@ -8,13 +8,13 @@
 
 **版本信息**：
 
-- 2.5、2.5.0、latest （Scala 2.12）
-- 2.4、2.4.1 （Scala 2.12）
-- 2.3、2.3.1 （Scala 2.12）
+- 2.5、latest （Scala 2.12）
+- 2.4（Scala 2.12）
+- 2.3（Scala 2.12）
 
 **镜像信息**
 
-* 镜像地址：colovu/kafka:latest
+* 镜像地址：colovu/kafka
 
 
 
@@ -23,7 +23,7 @@
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d --name kafka colovu/kafka:latest
+$ docker run -d colovu/kafka
 ```
 
 Docker-Compose 快速启动命令：
@@ -51,10 +51,10 @@ $ docker-compose up -d
 镜像默认提供以下数据卷定义，默认数据分别存储在自动生成的应用名对应`kafka`子目录中：
 
 ```shell
-/var/log			# 日志输出，应用日志输出，非数据日志输出
-/srv/conf			# 配置文件
-/srv/cert			# 证书文件目录
-/srv/datalog	# 数据操作日志文件
+/var/log                # 日志输出，应用日志输出，非数据日志输出
+/srv/conf               # 配置文件
+/srv/cert               # 证书文件目录
+/srv/datalog            # 数据操作日志文件
 ```
 
 如果需要持久化存储相应数据，需要**在宿主机建立本地目录**，并在使用镜像初始化容器时进行映射。宿主机相关的目录中如果不存在对应应用 Kafka 的子目录或相应数据文件，则容器会在初始化时创建相应目录及文件。
