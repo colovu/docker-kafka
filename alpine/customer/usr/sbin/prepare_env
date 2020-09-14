@@ -1,0 +1,8 @@
+#!/bin/bash
+# shell 执行参数，分别为 -e(命令执行错误则退出脚本) -u(变量未定义则报错) -x(打印实际待执行的命令行)
+set -eux
+
+APP_DIRS="${APP_DEF_DIR:-} ${APP_CONF_DIR:-} ${APP_DATA_DIR:-} ${APP_DATA_LOG_DIR:-} ${APP_CACHE_DIR:-} ${APP_RUN_DIR:-} ${APP_LOG_DIR:-} ${APP_CERT_DIR:-} ${APP_HOME_DIR:-}"
+
+mkdir -p ${APP_DIRS}
+chown -Rf ${APP_USER}:${APP_USER} ${APP_DIRS}; 
