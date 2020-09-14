@@ -47,7 +47,8 @@ RUN set -eux; \
 		https://www.apache.org/dist/${APP_NAME}/${APP_VERSION}/ \
 		https://archive.apache.org/dist/${APP_NAME}/${APP_VERSION}/ \
 		"; \
-	download_pkg unpack ${appName} "${appUrls}";
+	download_pkg unpack ${appName} "${appUrls}"; \
+	rm -rf /usr/local/${APP_NAME}_${scala_version}-${APP_VERSION}/site-docs;
 
 # 镜像生成 ========================================================================
 FROM colovu/openjre:1.8
