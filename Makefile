@@ -20,20 +20,20 @@ build-arg+=--build-arg local_url=http://$(local_ip)/dist-files
 
 .PHONY: build build-debian build-alpine clean clearclean upgrade
 
-build: build-debian build-alpine
+build: build-alpine build-debian
 	@echo "Build complete"
 
 build-debian:
-	@echo "Build $(app_name):$(current_tag)-deb"
-	@docker build --force-rm $(build-arg) -t $(app_name):$(current_tag)-deb .
-	@echo "Add tag: $(app_name):latest-deb"
-	@docker tag $(app_name):$(current_tag)-deb $(app_name):latest-deb
-
-build-alpine:
 	@echo "Build $(app_name):$(current_tag)"
-	@docker build --force-rm $(build-arg) -t $(app_name):$(current_tag) ./alpine
+	@docker build --force-rm $(build-arg) -t $(app_name):$(current_tag) .
 	@echo "Add tag: $(app_name):latest"
 	@docker tag $(app_name):$(current_tag) $(app_name):latest
+
+build-alpine:
+	@echo "Build $(app_name):$(current_tag)-alpine"
+	@docker build --force-rm $(build-arg) -t $(app_name):$(current_tag)-alpine ./alpine
+	@echo "Add tag: $(app_name):latest-alpine"
+	@docker tag $(app_name):$(current_tag)-alpine $(app_name):latest-alpine
 
 # 清理悬空的镜像（无TAG）及停止的容器 
 clearclean: clean
