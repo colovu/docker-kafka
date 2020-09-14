@@ -37,7 +37,7 @@ if ! is_sourced; then
 		exec gosu "${APP_USER:-APP_NAME}" "$0" "$@"
 	fi
 
-	/usr/local/bin/init.sh
+	[ "$1" = "${APP_EXEC}" ] && /usr/local/bin/init.sh
 
 	LOG_I "Start container with command: $@"
 	exec tini -- "$@"
