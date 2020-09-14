@@ -51,7 +51,7 @@ RUN set -eux; \
 	rm -rf /usr/local/${APP_NAME}_${scala_version}-${APP_VERSION}/site-docs;
 
 # 镜像生成 ========================================================================
-FROM colovu/openjre:1.8
+FROM colovu/openjre:1.8-alpine
 
 ARG apt_source=default
 ARG local_url=""
