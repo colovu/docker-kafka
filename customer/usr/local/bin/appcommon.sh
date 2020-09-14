@@ -5,12 +5,12 @@
 
 # 加载依赖脚本
 . /usr/local/scripts/libcommon.sh       # 通用函数库
+
 . /usr/local/scripts/libfile.sh
 . /usr/local/scripts/libfs.sh
 . /usr/local/scripts/libos.sh
 . /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
-. /usr/local/scripts/libnet.sh
 
 # 函数列表
 
@@ -21,70 +21,81 @@
 #   *_* : 应用配置文件使用的全局变量，变量名根据配置项定义
 # 返回值:
 #   可以被 'eval' 使用的序列化输出
-docker_app_env() {
-    cat <<"EOF"
-# Common Settings
-export ENV_DEBUG=${ENV_DEBUG:-false}
-export ALLOW_PLAINTEXT_LISTENER="${ALLOW_PLAINTEXT_LISTENER:-no}"
+app_env() {
+    cat <<-'EOF'
+		# Common Settings
+		export ENV_DEBUG=${ENV_DEBUG:-false}
+		export ALLOW_PLAINTEXT_LISTENER="${ALLOW_PLAINTEXT_LISTENER:-no}"
 
-# Paths
-export APP_CONF_FILE="${APP_CONF_DIR}/server.properties"
-export APP_PID_FILE="${APP_RUN_DIR}/${APP_NAME}.pid"
+		# Paths configuration
+		export APP_CONF_FILE="${APP_CONF_DIR}/server.properties"
+		export APP_PID_FILE="${APP_RUN_DIR}/${APP_NAME}.pid"
 
-# Zookeeper config
-export KAFKA_ZOOKEEPER_PASSWORD="${KAFKA_ZOOKEEPER_PASSWORD:-}"
-export KAFKA_ZOOKEEPER_USER="${KAFKA_ZOOKEEPER_USER:-}"
-export KAFKA_ZOOKEEPER_CONNECT="${KAFKA_ZOOKEEPER_CONNECT:-"localhost:2181"}"
-export KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS="${KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS:-6000}"
+		# Zookeeper config
+		export KAFKA_ZOOKEEPER_PASSWORD="${KAFKA_ZOOKEEPER_PASSWORD:-}"
+		export KAFKA_ZOOKEEPER_USER="${KAFKA_ZOOKEEPER_USER:-}"
+		export KAFKA_ZOOKEEPER_CONNECT="${KAFKA_ZOOKEEPER_CONNECT:-"localhost:2181"}"
+		export KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS="${KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS:-6000}"
 
-# Users
+		# Cluster configuration
+		export KAFKA_BROKER_ID="${KAFKA_BROKER_ID:-1}"
 
-# Cluster configuration
-export KAFKA_BROKER_ID="${KAFKA_BROKER_ID:-1}"
+		# Kafka settings
+		export KAFKA_PORT="${KAFKA_PORT:-9092}"
+		export KAFKA_LISTENERS="${KAFKA_LISTENERS:-INTERNAL://:${KAFKA_PORT}}"
+		export KAFKA_ADVERTISED_LISTENERS="${KAFKA_ADVERTISED_LISTENERS:-INTERNAL://:${KAFKA_PORT}}"
+		export KAFKA_LISTENER_SECURITY_PROTOCOL_MAP="${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:-INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT}"
+		export KAFKA_AUTO_CREATE_TOPICS_ENABLE="${KAFKA_AUTO_CREATE_TOPICS_ENABLE:-true}"
+		export KAFKA_SOCKET_SEND_BUFFER_BYTES="${KAFKA_SOCKET_SEND_BUFFER_BYTES:-102400}"
+		export KAFKA_SOCKET_RECEIVE_BUFFER_BYTES="${KAFKA_SOCKET_RECEIVE_BUFFER_BYTES:-102400}"
+		export KAFKA_SOCKET_REQUEST_MAX_BYTES="${KAFKA_SOCKET_REQUEST_MAX_BYTES:-104857600}"
+		export KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR="${KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR:-1}"
+		export KAFKA_TRANSACTION_STATE_LOG_MIN_ISR="${KAFKA_TRANSACTION_STATE_LOG_MIN_ISR:-1}"
+		export KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR="${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR:-1}"
+		export KAFKA_NUM_PARTITIONS="${KAFKA_NUM_PARTITIONS:-1}"
+		export KAFKA_NUM_RECOVERY_THREADS_PER_DATA_DIR="${KAFKA_NUM_RECOVERY_THREADS_PER_DATA_DIR:-1}"
+		export KAFKA_NUM_NETWORK_THREADS="${KAFKA_NUM_NETWORK_THREADS:-3}"
+		export KAFKA_NUM_IO_THREADS="${KAFKA_NUM_IO_THREADS:-8}"
+		export KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS="${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS:-0}"
 
-# Kafka settings
-export KAFKA_PORT="${KAFKA_PORT:-9092}"
-export KAFKA_LISTENERS="${KAFKA_LISTENERS:-INTERNAL://:${KAFKA_PORT}}"
-export KAFKA_ADVERTISED_LISTENERS="${KAFKA_ADVERTISED_LISTENERS:-INTERNAL://:${KAFKA_PORT}}"
-export KAFKA_LISTENER_SECURITY_PROTOCOL_MAP="${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:-INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT}"
-export KAFKA_AUTO_CREATE_TOPICS_ENABLE="${KAFKA_AUTO_CREATE_TOPICS_ENABLE:-true}"
-export KAFKA_SOCKET_SEND_BUFFER_BYTES="${KAFKA_SOCKET_SEND_BUFFER_BYTES:-102400}"
-export KAFKA_SOCKET_RECEIVE_BUFFER_BYTES="${KAFKA_SOCKET_RECEIVE_BUFFER_BYTES:-102400}"
-export KAFKA_SOCKET_REQUEST_MAX_BYTES="${KAFKA_SOCKET_REQUEST_MAX_BYTES:-104857600}"
-export KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR="${KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR:-1}"
-export KAFKA_TRANSACTION_STATE_LOG_MIN_ISR="${KAFKA_TRANSACTION_STATE_LOG_MIN_ISR:-1}"
-export KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR="${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR:-1}"
-export KAFKA_NUM_PARTITIONS="${KAFKA_NUM_PARTITIONS:-1}"
-export KAFKA_NUM_RECOVERY_THREADS_PER_DATA_DIR="${KAFKA_NUM_RECOVERY_THREADS_PER_DATA_DIR:-1}"
-export KAFKA_NUM_NETWORK_THREADS="${KAFKA_NUM_NETWORK_THREADS:-3}"
-export KAFKA_NUM_IO_THREADS="${KAFKA_NUM_IO_THREADS:-8}"
-export KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS="${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS:-0}"
+		# Log Settings
+		export KAFKA_LOG_DIRS="${KAFKA_LOG_DIRS:-${APP_DATA_LOG_DIR}}"
+		export KAFKA_LOG_SEGMENT_BYTES="${KAFKA_LOG_SEGMENT_BYTES:-1073741824}"
+		export KAFKA_LOG_FLUSH_INTERVAL_MESSAGES="${KAFKA_LOG_FLUSH_INTERVAL_MESSAGES:-10000}"
+		export KAFKA_LOG_FLUSH_INTERVAL_MS="${KAFKA_LOG_FLUSH_INTERVAL_MS:-1000}"
+		export KAFKA_LOG_RETENTION_HOURS="${KAFKA_LOG_RETENTION_HOURS:-168}"
+		export KAFKA_LOG_RETENTION_BYTES="${KAFKA_LOG_RETENTION_BYTES:-1073741824}"
+		export KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS="${KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS:-300000}"
+		export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:${APP_CONF_DIR}/log4j.properties"
 
-# Log Settings
-export KAFKA_LOG_DIRS="${KAFKA_LOG_DIRS:-${APP_DATA_LOG_DIR}}"
-export KAFKA_LOG_SEGMENT_BYTES="${KAFKA_LOG_SEGMENT_BYTES:-1073741824}"
-export KAFKA_LOG_FLUSH_INTERVAL_MESSAGES="${KAFKA_LOG_FLUSH_INTERVAL_MESSAGES:-10000}"
-export KAFKA_LOG_FLUSH_INTERVAL_MS="${KAFKA_LOG_FLUSH_INTERVAL_MS:-1000}"
-export KAFKA_LOG_RETENTION_HOURS="${KAFKA_LOG_RETENTION_HOURS:-168}"
-export KAFKA_LOG_RETENTION_BYTES="${KAFKA_LOG_RETENTION_BYTES:-1073741824}"
-export KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS="${KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS:-300000}"
-export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:${APP_CONF_DIR}/log4j.properties"
+		# Java Settings
+		export JVMFLAGS="${JVMFLAGS:-}"
+		export HEAP_SIZE="${HEAP_SIZE:-1024}"
 
-# Java Settings
-export JVMFLAGS="${JVMFLAGS:-}"
-export HEAP_SIZE="${HEAP_SIZE:-1024}"
+		# SSL Settings
+		export KAFKA_KEYSTORE_FILE="${KAFKA_KEYSTORE_FILE:-kafka.keystore.jks}"
+		export KAFKA_TRUSTSTORE_FILE="${KAFKA_TRUSTSTORE_FILE:-kafka.truststore.jks}"
+		export KAFKA_CERTIFICATE_PASSWORD="${KAFKA_CERTIFICATE_PASSWORD:-}"
 
-# SSL Settings
-export KAFKA_KEYSTORE_FILE="${KAFKA_KEYSTORE_FILE:-kafka.keystore.jks}"
-export KAFKA_TRUSTSTORE_FILE="${KAFKA_TRUSTSTORE_FILE:-kafka.truststore.jks}"
-export KAFKA_CERTIFICATE_PASSWORD="${KAFKA_CERTIFICATE_PASSWORD:-}"
-
-# Authentication
-export KAFKA_CLIENT_USER="${KAFKA_CLIENT_USER:-colovu}"
-export KAFKA_CLIENT_PASSWORD="${KAFKA_CLIENT_PASSWORD:-pas4colovu}"
-export KAFKA_INTER_BROKER_USER="${KAFKA_INTER_BROKER_USER:-colovu}"
-export KAFKA_INTER_BROKER_PASSWORD="${KAFKA_INTER_BROKER_PASSWORD:-pas4colovu}"
+		# Authentication
+		export KAFKA_CLIENT_USER="${KAFKA_CLIENT_USER:-colovu}"
+		export KAFKA_CLIENT_PASSWORD="${KAFKA_CLIENT_PASSWORD:-pas4colovu}"
+		export KAFKA_INTER_BROKER_USER="${KAFKA_INTER_BROKER_USER:-colovu}"
+		export KAFKA_INTER_BROKER_PASSWORD="${KAFKA_INTER_BROKER_PASSWORD:-pas4colovu}"
 EOF
+
+    # 利用 *_FILE 设置密码，不在配置命令中设置密码，增强安全性
+    if [[ -f "${KAFKA_CLIENT_PASSWORD_FILE:-}" ]]; then
+        cat <<-'EOF'
+            export KAFKA_CLIENT_PASSWORD="$(< "${KAFKA_CLIENT_PASSWORD_FILE}")"
+EOF
+    fi
+
+    if [[ -f "${KAFKA_ZOOKEEPER_PASSWORD_FILE:-}" ]]; then
+        cat <<-'EOF'
+            export KAFKA_ZOOKEEPER_PASSWORD="$(< "${KAFKA_ZOOKEEPER_PASSWORD_FILE}")"
+EOF
+    fi
 }
 
 # 为全局变量创建一个化名(alias)变量
@@ -174,8 +185,6 @@ kafka_common_conf_set() {
 }
 
 # 更新 log4j.properties 配置文件中指定变量值
-# 全局变量:
-#   APP_CONF_DIR
 # 变量:
 #   $1 - 变量
 #   $2 - 值（列表）
@@ -184,8 +193,6 @@ kafka_log4j_set() {
 }
 
 # 更新 server.properties 配置文件中指定变量值
-# 全局变量:
-#   APP_CONF_DIR
 # 变量:
 #   $1 - 变量
 #   $2 - 值（列表）
@@ -194,8 +201,6 @@ kafka_server_conf_set() {
 }
 
 # 更新 producer.properties 及 consumer.properties 配置文件中指定变量值
-# 全局变量:
-#   APP_CONF_DIR
 # 变量:
 #   $1 - 变量
 #   $2 - 值（列表）
@@ -204,10 +209,7 @@ kafka_producer_consumer_conf_set() {
     kafka_common_conf_set "${APP_CONF_DIR}/consumer.properties" "$@"
 }
 
-
 # 设置环境变量 JVMFLAGS
-# 全局变量:
-#   JVMFLAGS
 # 参数:
 #   $1 - value
 kafka_export_jvmflags() {
@@ -218,14 +220,12 @@ kafka_export_jvmflags() {
 }
 
 # 配置 HEAP 大小
-# 全局变量:
-#   JVMFLAGS
 # 参数:
 #   $1 - HEAP 大小
 kafka_configure_heap_size() {
     local -r heap_size="${1:?heap_size is required}"
 
-    if [[ "$JVMFLAGS" =~ -Xm[xs].*-Xm[xs] ]]; then
+    if [[ "${JVMFLAGS}" =~ -Xm[xs].*-Xm[xs] ]]; then
         LOG_D "Using specified values (JVMFLAGS=${JVMFLAGS})"
     else
         LOG_D "Setting '-Xmx${heap_size}m -Xms${heap_size}m' heap options..."
@@ -234,8 +234,6 @@ kafka_configure_heap_size() {
 }
 
 # 生成 JAAS 认证文件
-# 全局变量:
-#   KAFKA_*
 kafka_generate_jaas_authentication_file() {
     local -r internal_protocol="${1:-}"
     local -r client_protocol="${2:-}"
@@ -300,9 +298,6 @@ EOF
 }
 
 # 配置 Kafka SSL 参数
-# 全局变量:
-#   KAFKA_*
-#   APP_CERT_DIR
 kafka_configure_ssl() {
     # Set Kafka configuration
     kafka_server_conf_set ssl.keystore.location "$APP_CERT_DIR/KAFKA_KEYSTORE_FILE"
@@ -383,8 +378,6 @@ kafka_configure_client_communications() {
 }
 
 # 使用环境变量中的配置值更新配置文件
-# 全局变量:
-#   KAFKA_CFG_*
 kafka_configure_from_environment_variables() {
     # Map environment variables to config properties
     for var in "${!KAFKA_CFG_@}"; do
@@ -394,8 +387,7 @@ kafka_configure_from_environment_variables() {
     done
 }
 
-# 检测用户参数信息是否满足条件
-# 针对部分权限过于开放情况，可打印提示信息
+# 检测用户参数信息是否满足条件; 针对部分权限过于开放情况，打印提示信息
 app_verify_minimum_env() {
     local error_code=0
 
@@ -466,17 +458,23 @@ app_enable_remote_connections() {
 }
 
 # 以后台方式启动应用服务，并等待启动就绪
-# 全局变量:
-#   ZOO_*
 app_start_server_bg() {
     is_app_server_running && return
     LOG_I "Starting ${APP_NAME} in background..."
 
+	# 使用内置脚本启动服务
     #local start_command="zkServer.sh start"
     #if is_boolean_yes "${ENV_DEBUG}"; then
-    #    $start_command
+    #    $start_command &
     #else
-    #    $start_command >/dev/null 2>&1
+    #    $start_command >/dev/null 2>&1 &
+    #fi
+	
+	# 使用内置命令启动服务
+	# if [[ "${ENV_DEBUG:-false}" = true ]]; then
+    #    debug_execute "rabbitmq-server" &
+    #else
+    #    debug_execute "rabbitmq-server" >/dev/null 2>&1 &
     #fi
 
 	# 通过命令或特定端口检测应用是否就绪
@@ -487,8 +485,6 @@ app_start_server_bg() {
 }
 
 # 停止应用服务
-# 全局变量:
-#   APP_*
 app_stop_server() {
     is_app_server_running || return
     LOG_I "Stopping ${APP_NAME}..."
@@ -496,23 +492,30 @@ app_stop_server() {
     # 使用 PID 文件 kill 进程
     stop_service_using_pid "$APP_PID_FILE"
 
+	# 使用内置命令停止服务
+    #debug_execute "rabbitmqctl" stop
+
     # 使用内置脚本关闭服务
     #if [[ "$ENV_DEBUG" = true ]]; then
     #    "zkServer.sh" stop
     #else
     #    "zkServer.sh" stop >/dev/null 2>&1
     #fi
+
+	# 检测停止是否完成
+	local counter=10
+    while [[ "$counter" -ne 0 ]] && is_app_server_running; do
+        LOG_D "Waiting for ${APP_NAME} to stop..."
+        sleep 1
+        counter=$((counter - 1))
+    done
 }
 
 # 检测应用服务是否在后台运行中
-# 全局变量:
-#   ZOO_*
-# 返回值:
-#   布尔值
 is_app_server_running() {
     LOG_D "Check if ${APP_NAME} is running..."
     local pid
-    pid="$(get_pid_from_file "${APP_PID_FILE}")"
+    pid="$(get_pid_from_file '/var/run/${APP_NAME}/${APP_NAME}.pid')"
 
     if [[ -z "${pid}" ]]; then
         false
@@ -528,12 +531,10 @@ app_clean_tmp_file() {
 }
 
 # 在重新启动容器时，删除标志文件及必须删除的临时文件 (容器重新启动)
-# 全局变量:
-#   APP_*
 app_clean_from_restart() {
     LOG_D "Clean ${APP_NAME} tmp files for restart..."
     local -r -a files=(
-        "${APP_PID_FILE}"
+        "/var/run/${APP_NAME}/${APP_NAME}.pid"
     )
 
     for file in ${files[@]}; do
@@ -546,7 +547,7 @@ app_clean_from_restart() {
 
 # 应用默认初始化操作
 # 执行完毕后，生成文件 ${APP_CONF_DIR}/.app_init_flag 及 ${APP_DATA_DIR}/.data_init_flag 文件
-docker_app_init() {
+app_default_init() {
 	app_clean_from_restart
     LOG_D "Check init status of ${APP_NAME}..."
 
@@ -609,7 +610,7 @@ docker_app_init() {
 
 # 用户自定义的前置初始化操作，依次执行目录 preinitdb.d 中的初始化脚本
 # 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_preinit_flag
-docker_custom_preinit() {
+app_custom_preinit() {
     LOG_D "Check custom pre-init status of ${APP_NAME}..."
 
     # 检测用户配置文件目录是否存在 preinitdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
@@ -620,7 +621,7 @@ docker_custom_preinit() {
             LOG_I "Process custom pre-init scripts from /srv/conf/${APP_NAME}/preinitdb.d..."
 
             # 检索所有可执行脚本，排序后执行
-            find "/srv/conf/${APP_NAME}/preinitdb.d/" -type f -regex ".*\.\(sh\)" | sort | docker_process_init_files
+            find "/srv/conf/${APP_NAME}/preinitdb.d/" -type f -regex ".*\.\(sh\)" | sort | process_init_files
 
             touch ${APP_DATA_DIR}/.custom_preinit_flag
             echo "$(date '+%Y-%m-%d %H:%M:%S') : Init success." >> ${APP_DATA_DIR}/.custom_preinit_flag
@@ -629,17 +630,22 @@ docker_custom_preinit() {
             LOG_I "Custom preinit for ${APP_NAME} already done before, skipping initialization."
         fi
     fi
+
+    # 检测依赖的服务是否就绪
+    #for i in ${SERVICE_PRECONDITION[@]}; do
+    #    app_wait_service "${i}"
+    #done
 }
 
 # 用户自定义的应用初始化操作，依次执行目录initdb.d中的初始化脚本
 # 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_init_flag
-docker_custom_init() {
+app_custom_init() {
     LOG_D "Check custom init status of ${APP_NAME}..."
 
     # 检测用户配置文件目录是否存在 initdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
     if [ -d "/srv/conf/${APP_NAME}/initdb.d" ]; then
     	# 检测数据存储目录是否存在已初始化标志文件；如果不存在，检索可执行脚本文件并进行初始化操作
-    	if [[ -n $(find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)") ]] && \
+    	if [[ -n $(find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\|sql\|sql.gz\)") ]] && \
             [[ ! -f "${APP_DATA_DIR}/.custom_init_flag" ]]; then
             LOG_I "Process custom init scripts from /srv/conf/${APP_NAME}/initdb.d..."
 
@@ -647,7 +653,7 @@ docker_custom_init() {
             is_app_server_running || app_start_server_bg
 
             # 检索所有可执行脚本，排序后执行
-    		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\)" | sort | while read -r f; do
+    		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\|sql\|sql.gz\)" | sort | while read -r f; do
                 case "$f" in
                     *.sh)
                         if [[ -x "$f" ]]; then
@@ -656,6 +662,8 @@ docker_custom_init() {
                             LOG_D "Sourcing $f"; . "$f"
                         fi
                         ;;
+                    #*.sql)    LOG_D "Executing $f"; postgresql_execute "$PG_DATABASE" "$PG_INITSCRIPTS_USERNAME" "$PG_INITSCRIPTS_PASSWORD" < "$f";;
+                    #*.sql.gz) LOG_D "Executing $f"; gunzip -c "$f" | postgresql_execute "$PG_DATABASE" "$PG_INITSCRIPTS_USERNAME" "$PG_INITSCRIPTS_PASSWORD";;
                     *)        LOG_D "Ignoring $f" ;;
                 esac
             done
@@ -677,3 +685,4 @@ docker_custom_init() {
 	# 绑定所有 IP ，启用远程访问
     app_enable_remote_connections
 }
+
