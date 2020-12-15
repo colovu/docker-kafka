@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   zookeeper:
-    image: 'colovu/zookeeper:latest'
+    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.6'
     ports:
       - '2181:2181'
     environment:
@@ -11,7 +11,7 @@ services:
 
   # 宿主机中其他应用直接访问时，需要确保宿主机hosts中已经包含kafka1定义
   kafka1:
-    image: 'colovu/kafka:latest'
+    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.5'
     ports:
       - '9092:9092'
     environment:
@@ -27,7 +27,7 @@ services:
 
   # 宿主机中其他应用直接访问时，需要确保宿主机hosts中已经包含kafka2定义
   kafka2:
-    image: 'colovu/kafka:latest'
+    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.5'
     ports:
       - '9093:9092'
     environment:
@@ -43,7 +43,7 @@ services:
 
   # 宿主机中其他应用直接访问时，需要确保宿主机hosts中已经包含kafka3定义
   kafka3:
-    image: 'colovu/kafka:latest'
+    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.5'
     ports:
       - '9094:9092'
     environment:
