@@ -1,11 +1,12 @@
-# Ver: 1.2 by Endial Fang (endial@126.com)
+# Ver: 1.4 by Endial Fang (endial@126.com)
 #
 
 # 预处理 =========================================================================
-FROM colovu/dbuilder as builder
+ARG registry_url="registry.cn-shenzhen.aliyuncs.com"
+FROM ${registry_url}/colovu/dbuilder as builder
 
 # sources.list 可使用版本：default / tencent / ustc / aliyun / huawei
-ARG apt_source=default
+ARG apt_source=aliyun
 
 # 编译镜像时指定用于加速的本地服务器地址
 ARG local_url=""
@@ -15,12 +16,13 @@ ARG scala_version=2.12
 ENV APP_NAME=kafka \
 	APP_VERSION=2.3.1
 
-WORKDIR /usr/local
-
+# 选择软件包源(Optional)，以加速后续软件包安装
 RUN select_source ${apt_source};
+
+# 安装依赖的软件包及库(Optional)
 #RUN install_pkg xz-utils
 
-# 下载并解压软件包
+# 下载并解压软件包 render-template
 RUN set -eux; \
 	appName="render-template-1.0.0-0-linux-amd64-debian-10.tar.gz"; \
 	[ ! -z ${local_url} ] && localURL=${local_url}/bitnami; \
@@ -31,7 +33,7 @@ RUN set -eux; \
 	mv /usr/local/render-template-1.0.0-0-linux-amd64-debian-10/files/common/bin/render-template /usr/local/bin/; \
 	chmod +x /usr/local/bin/render-template;
 
-# 下载并解压软件包
+# 下载并解压软件包 kafka
 RUN set -eux; \
 	appName="${APP_NAME}_${scala_version}-${APP_VERSION}.tgz"; \
 	appKeys="0x3D296268A36FACA1B7EAF110792D43153B5B5147 \
@@ -50,10 +52,14 @@ RUN set -eux; \
 	download_pkg unpack ${appName} "${appUrls}"; \
 	rm -rf /usr/local/${APP_NAME}_${scala_version}-${APP_VERSION}/site-docs;
 
-# 镜像生成 ========================================================================
-FROM colovu/openjre:1.8
 
-ARG apt_source=default
+# 镜像生成 ========================================================================
+FROM ${registry_url}/colovu/openjre:8
+
+# sources.list 可使用版本：default / tencent / ustc / aliyun / huawei
+ARG apt_source=aliyun
+
+# 编译镜像时指定用于加速的本地服务器地址
 ARG local_url=""
 
 ARG scala_version=2.12
