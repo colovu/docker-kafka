@@ -1,7 +1,8 @@
-# Ver: 1.4 by Endial Fang (endial@126.com)
+# Ver: 1.7 by Endial Fang (endial@126.com)
 #
 # 当前 Docker 镜像的编译脚本
 
+registry_url :=registry.cn-shenzhen.aliyuncs.com
 app_name :=colovu/kafka
 
 # 生成镜像TAG，类似：
@@ -9,13 +10,13 @@ app_name :=colovu/kafka
 # 	<镜像名>:<分支名>-<年月日>-<时分秒>		# Git 仓库有文件修改后的编译
 # 	<镜像名>:latest-<年月日>-<时分秒>		# 非 Git 仓库编译
 current_subversion:=$(shell if [ ! `git status >/dev/null 2>&1` ]; then git rev-parse --short HEAD; else date +%y%m%d-%H%M%S; fi)
-current_tag:=$(shell if [ ! `git status >/dev/null 2>&1` ]; then git rev-parse --abbrev-ref HEAD | sed -e 's/master/latest/'; else echo "latest"; fi)-$(current_subversion)
+current_tag:=local-$(shell if [ ! `git status >/dev/null 2>&1` ]; then git rev-parse --abbrev-ref HEAD | sed -e 's/master/latest/'; else echo "latest"; fi)-$(current_subversion)
 
 # Sources List: default / tencent / ustc / aliyun / huawei
 build-arg:=--build-arg apt_source=tencent
 
 # 设置本地下载服务器路径，加速调试时的本地编译速度
-local_ip:=`ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $$2}'|tr -d "addr:"`
+local_ip:=`echo "en0 eth0" |xargs -n1 ip addr show 2>/dev/null|grep inet|grep -v 127.0.0.1|grep -v inet6|tr "/" " "|awk '{print $$2}'`
 build-arg+=--build-arg local_url=http://$(local_ip)/dist-files
 
 .PHONY: build build-debian build-alpine clean clearclean upgrade
@@ -26,14 +27,14 @@ build: build-alpine build-debian
 build-debian:
 	@echo "Build $(app_name):$(current_tag)"
 	@docker build --force-rm $(build-arg) -t $(app_name):$(current_tag) .
-	@echo "Add tag: $(app_name):latest"
-	@docker tag $(app_name):$(current_tag) $(app_name):latest
+	@echo "Add tag: $(app_name):local-latest"
+	@docker tag $(app_name):$(current_tag) $(app_name):local-latest
 
 build-alpine:
 	@echo "Build $(app_name):$(current_tag)-alpine"
 	@docker build --force-rm $(build-arg) -t $(app_name):$(current_tag)-alpine ./alpine
-	@echo "Add tag: $(app_name):latest-alpine"
-	@docker tag $(app_name):$(current_tag)-alpine $(app_name):latest-alpine
+	@echo "Add tag: $(app_name):local-latest-alpine"
+	@docker tag $(app_name):$(current_tag)-alpine $(app_name):local-latest-alpine
 
 # 清理悬空的镜像（无TAG）及停止的容器 
 clearclean: clean
@@ -45,16 +46,6 @@ clearclean: clean
 clean:
 	@echo "Clean all images for current application..."
 	@docker images | grep "$(app_name) " | awk '{print $$3}' | sort -u | xargs -L 1 docker rmi -f
-
-tag:
-	@echo "Add tag: $(local_registory)/$(app_name):latest"
-	@docker tag $(app_name):latest $(local_registory)/$(app_name):latest
-
-push: tag
-	@echo "Push: $(local_registory)/$(app_name):latest"
-	@docker push $(local_registory)/$(app_name):latest
-	@echo "Push: $(app_name):latest"
-	@docker push $(app_name):latest
 
 # 更新所有 colovu 仓库的镜像 
 upgrade: 
