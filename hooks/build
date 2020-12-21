@@ -1,0 +1,7 @@
+#!/bin/bash
+# v1.0 by Endial Fang (endial@126.com)
+#
+# 用户 docker.hub 的自动编译钩子文件，相应的变量在镜像库自动编译界面进行配置（如：registry_url、apt_source）
+# 参见： https://docs.docker.com/docker-hub/builds/advanced/
+
+docker build --build-arg registry_url=${registry_url:-docker.io} --build-arg apt_source=${apt_source:-default} -f $DOCKERFILE_PATH -t $IMAGE_NAME .
