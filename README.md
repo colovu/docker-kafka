@@ -8,7 +8,7 @@
 
 **版本信息**：
 
-- 2.6（Scala 2.13）、latest 
+- 2.6（Scala 2.13）
 - 2.5（Scala 2.12） 
 - 2.4（Scala 2.12）
 - 2.3（Scala 2.12）
@@ -16,8 +16,8 @@
 **镜像信息**
 
 * 镜像地址：
-  - Aliyun仓库：registry.cn-shenzhen.aliyuncs.com/colovu/kafka:latest
-  - DockerHub：colovu/kafka:latest
+  - Aliyun仓库：registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.6
+  - DockerHub：colovu/kafka:2.6
   * 依赖镜像：colovu/openjre:8
 
 > 后续相关命令行默认使用`[Docker Hub](https://hub.docker.com)`镜像服务器做说明
@@ -29,7 +29,7 @@
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d colovu/kafka:latest
+$ docker run -d colovu/kafka:2.6
 ```
 
 Docker-Compose 快速启动命令：
@@ -77,7 +77,7 @@ $ docker-compose up -d
 在初始化 Kafka 容器时，如果配置文件不存在，可以在命令行中使用相应参数对默认参数进行修改。类似命令如下：
 
 ```shell
-$ docker run -d -e "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181" --name kafka1 colovu/kafka:latest
+$ docker run -d -e "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181" --name kafka1 colovu/kafka:2.6
 ```
 
 
@@ -216,7 +216,7 @@ version: '3.6'
 
 services:
   zookeeper:
-    image: 'colovu/zookeeper:latest'
+    image: 'colovu/zookeeper:3.6'
     ports:
      - '2181:2181'
     environment:
@@ -224,7 +224,7 @@ services:
       - ZOO_SERVER_USERS=kafka
       - ZOO_SERVER_PASSWORDS=kafka_password
   kafka:
-    image: 'colovu/kafka:latest'
+    image: 'colovu/kafka:2.6'
     hostname: kafka.example.com
     ports:
       - '9092'
