@@ -1,5 +1,5 @@
 #!/bin/bash
-# Ver: 1.0 by Endial Fang (endial@126.com)
+# Ver: 1.1 by Endial Fang (endial@126.com)
 # 
 # 应用通用业务处理函数
 
@@ -8,95 +8,12 @@
 
 . /usr/local/scripts/libfile.sh
 . /usr/local/scripts/libfs.sh
+. /usr/local/scripts/liblog.sh
 . /usr/local/scripts/libos.sh
 . /usr/local/scripts/libservice.sh
 . /usr/local/scripts/libvalidations.sh
 
 # 函数列表
-
-# 加载应用使用的环境变量初始值，该函数在相关脚本中以 eval 方式调用
-# 全局变量:
-#   ENV_* : 容器使用的全局变量
-#   APP_* : 在镜像创建时定义的全局变量
-#   *_* : 应用配置文件使用的全局变量，变量名根据配置项定义
-# 返回值:
-#   可以被 'eval' 使用的序列化输出
-app_env() {
-    cat <<-'EOF'
-		# Common Settings
-		export ENV_DEBUG=${ENV_DEBUG:-false}
-		export ALLOW_PLAINTEXT_LISTENER="${ALLOW_PLAINTEXT_LISTENER:-no}"
-
-		# Paths configuration
-		export APP_CONF_FILE="${APP_CONF_DIR}/server.properties"
-		export APP_PID_FILE="${APP_RUN_DIR}/${APP_NAME}.pid"
-
-		# Zookeeper config
-		export KAFKA_ZOOKEEPER_PASSWORD="${KAFKA_ZOOKEEPER_PASSWORD:-}"
-		export KAFKA_ZOOKEEPER_USER="${KAFKA_ZOOKEEPER_USER:-}"
-		export KAFKA_ZOOKEEPER_CONNECT="${KAFKA_ZOOKEEPER_CONNECT:-"localhost:2181"}"
-		export KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS="${KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS:-6000}"
-
-		# Cluster configuration
-		export KAFKA_BROKER_ID="${KAFKA_BROKER_ID:-1}"
-
-		# Kafka settings
-		export KAFKA_PORT="${KAFKA_PORT:-9092}"
-		export KAFKA_LISTENERS="${KAFKA_LISTENERS:-INTERNAL://:${KAFKA_PORT}}"
-		export KAFKA_ADVERTISED_LISTENERS="${KAFKA_ADVERTISED_LISTENERS:-INTERNAL://:${KAFKA_PORT}}"
-		export KAFKA_LISTENER_SECURITY_PROTOCOL_MAP="${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP:-INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT}"
-		export KAFKA_AUTO_CREATE_TOPICS_ENABLE="${KAFKA_AUTO_CREATE_TOPICS_ENABLE:-true}"
-		export KAFKA_SOCKET_SEND_BUFFER_BYTES="${KAFKA_SOCKET_SEND_BUFFER_BYTES:-102400}"
-		export KAFKA_SOCKET_RECEIVE_BUFFER_BYTES="${KAFKA_SOCKET_RECEIVE_BUFFER_BYTES:-102400}"
-		export KAFKA_SOCKET_REQUEST_MAX_BYTES="${KAFKA_SOCKET_REQUEST_MAX_BYTES:-104857600}"
-		export KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR="${KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR:-1}"
-		export KAFKA_TRANSACTION_STATE_LOG_MIN_ISR="${KAFKA_TRANSACTION_STATE_LOG_MIN_ISR:-1}"
-		export KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR="${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR:-1}"
-		export KAFKA_NUM_PARTITIONS="${KAFKA_NUM_PARTITIONS:-1}"
-		export KAFKA_NUM_RECOVERY_THREADS_PER_DATA_DIR="${KAFKA_NUM_RECOVERY_THREADS_PER_DATA_DIR:-1}"
-		export KAFKA_NUM_NETWORK_THREADS="${KAFKA_NUM_NETWORK_THREADS:-3}"
-		export KAFKA_NUM_IO_THREADS="${KAFKA_NUM_IO_THREADS:-8}"
-		export KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS="${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS:-0}"
-
-		# Log Settings
-		export KAFKA_LOG_DIRS="${KAFKA_LOG_DIRS:-${APP_DATA_LOG_DIR}}"
-		export KAFKA_LOG_SEGMENT_BYTES="${KAFKA_LOG_SEGMENT_BYTES:-1073741824}"
-		export KAFKA_LOG_FLUSH_INTERVAL_MESSAGES="${KAFKA_LOG_FLUSH_INTERVAL_MESSAGES:-10000}"
-		export KAFKA_LOG_FLUSH_INTERVAL_MS="${KAFKA_LOG_FLUSH_INTERVAL_MS:-1000}"
-		export KAFKA_LOG_RETENTION_HOURS="${KAFKA_LOG_RETENTION_HOURS:-168}"
-		export KAFKA_LOG_RETENTION_BYTES="${KAFKA_LOG_RETENTION_BYTES:-1073741824}"
-		export KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS="${KAFKA_LOG_RETENTION_CHECK_INTERVALS_MS:-300000}"
-		export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:${APP_CONF_DIR}/log4j.properties"
-
-		# Java Settings
-		export JVMFLAGS="${JVMFLAGS:-}"
-		export HEAP_SIZE="${HEAP_SIZE:-1024}"
-
-		# SSL Settings
-		export KAFKA_KEYSTORE_FILE="${KAFKA_KEYSTORE_FILE:-kafka.keystore.jks}"
-		export KAFKA_TRUSTSTORE_FILE="${KAFKA_TRUSTSTORE_FILE:-kafka.truststore.jks}"
-		export KAFKA_CERTIFICATE_PASSWORD="${KAFKA_CERTIFICATE_PASSWORD:-}"
-
-		# Authentication
-		export KAFKA_CLIENT_USER="${KAFKA_CLIENT_USER:-colovu}"
-		export KAFKA_CLIENT_PASSWORD="${KAFKA_CLIENT_PASSWORD:-pas4colovu}"
-		export KAFKA_INTER_BROKER_USER="${KAFKA_INTER_BROKER_USER:-colovu}"
-		export KAFKA_INTER_BROKER_PASSWORD="${KAFKA_INTER_BROKER_PASSWORD:-pas4colovu}"
-EOF
-
-    # 利用 *_FILE 设置密码，不在配置命令中设置密码，增强安全性
-    if [[ -f "${KAFKA_CLIENT_PASSWORD_FILE:-}" ]]; then
-        cat <<-'EOF'
-            export KAFKA_CLIENT_PASSWORD="$(< "${KAFKA_CLIENT_PASSWORD_FILE}")"
-EOF
-    fi
-
-    if [[ -f "${KAFKA_ZOOKEEPER_PASSWORD_FILE:-}" ]]; then
-        cat <<-'EOF'
-            export KAFKA_ZOOKEEPER_PASSWORD="$(< "${KAFKA_ZOOKEEPER_PASSWORD_FILE}")"
-EOF
-    fi
-}
 
 # 为全局变量创建一个化名(alias)变量
 # 参数:
@@ -388,7 +305,7 @@ kafka_configure_from_environment_variables() {
 }
 
 # 检测用户参数信息是否满足条件; 针对部分权限过于开放情况，打印提示信息
-app_verify_minimum_env() {
+kafka_verify_minimum_env() {
     local error_code=0
 
     LOG_D "Validating settings in KAFKA_* env vars..."
@@ -412,7 +329,7 @@ app_verify_minimum_env() {
     }
     check_conflicting_listener_ports() {
         local validate_port_args=()
-        ! _is_run_as_root && validate_port_args+=("-unprivileged")
+        ! is_root && validate_port_args+=("-unprivileged")
         if ! err=$(validate_port "${validate_port_args[@]}" "$1"); then
             print_validation_error "An invalid port was specified in the environment variable KAFKA_CFG_LISTENERS: $err"
         fi
@@ -452,14 +369,14 @@ app_verify_minimum_env() {
 }
 
 # 更改默认监听地址为 "*" 或 "0.0.0.0"，以对容器外提供服务；默认配置文件应当为仅监听 localhost(127.0.0.1)
-app_enable_remote_connections() {
+kafka_enable_remote_connections() {
     LOG_D "Modify default config to enable all IP access"
 	
 }
 
 # 以后台方式启动应用服务，并等待启动就绪
-app_start_server_bg() {
-    is_app_server_running && return
+kafka_start_server_bg() {
+    kafka_is_server_running && return
     LOG_I "Starting ${APP_NAME} in background..."
 
 	# 使用内置脚本启动服务
@@ -485,8 +402,8 @@ app_start_server_bg() {
 }
 
 # 停止应用服务
-app_stop_server() {
-    is_app_server_running || return
+kafka_stop_server() {
+    kafka_is_server_running || return
     LOG_I "Stopping ${APP_NAME}..."
     
     # 使用 PID 文件 kill 进程
@@ -504,7 +421,7 @@ app_stop_server() {
 
 	# 检测停止是否完成
 	local counter=10
-    while [[ "$counter" -ne 0 ]] && is_app_server_running; do
+    while [[ "$counter" -ne 0 ]] && kafka_is_server_running; do
         LOG_D "Waiting for ${APP_NAME} to stop..."
         sleep 1
         counter=$((counter - 1))
@@ -512,10 +429,10 @@ app_stop_server() {
 }
 
 # 检测应用服务是否在后台运行中
-is_app_server_running() {
+kafka_is_server_running() {
     LOG_D "Check if ${APP_NAME} is running..."
     local pid
-    pid="$(get_pid_from_file '/var/run/${APP_NAME}/${APP_NAME}.pid')"
+    pid="$(get_pid_from_file "${APP_PID_FILE}")"
 
     if [[ -z "${pid}" ]]; then
         false
@@ -524,14 +441,18 @@ is_app_server_running() {
     fi
 }
 
+kafka_is_server_not_running() {
+    ! kafka_is_server_running
+}
+
 # 清理初始化应用时生成的临时文件
-app_clean_tmp_file() {
+kafka_clean_tmp_file() {
     LOG_D "Clean ${APP_NAME} tmp files for init..."
 
 }
 
 # 在重新启动容器时，删除标志文件及必须删除的临时文件 (容器重新启动)
-app_clean_from_restart() {
+kafka_clean_from_restart() {
     LOG_D "Clean ${APP_NAME} tmp files for restart..."
     local -r -a files=(
         "/var/run/${APP_NAME}/${APP_NAME}.pid"
@@ -547,15 +468,15 @@ app_clean_from_restart() {
 
 # 应用默认初始化操作
 # 执行完毕后，生成文件 ${APP_CONF_DIR}/.app_init_flag 及 ${APP_DATA_DIR}/.data_init_flag 文件
-app_default_init() {
-	app_clean_from_restart
+kafka_default_init() {
+	kafka_clean_from_restart
     LOG_D "Check init status of ${APP_NAME}..."
 
     # 检测配置文件是否存在
     if [[ ! -f "${APP_CONF_DIR}/.app_init_flag" ]]; then
         LOG_I "No injected configuration file found, creating default config files..."
 
-        kafka_server_conf_set "log.dirs" "$KAFKA_CFG_LOG_DIRS"
+        kafka_server_conf_set "log.dirs" "${KAFKA_LOG_DIRS}"
         kafka_log4j_set "kafka.logs.dir" "${APP_LOG_DIR}"
 
         #export LOG_DIR=${APP_LOG_DIR}
@@ -597,7 +518,7 @@ app_default_init() {
         LOG_I "Deploying ${APP_NAME} from scratch..."
 
 		# 检测服务是否运行中如果未运行，则启动后台服务
-        is_app_server_running || app_start_server_bg
+        kafka_is_server_running || kafka_start_server_bg
 
         # TODO: 根据需要生成相应初始化数据
 
@@ -610,7 +531,7 @@ app_default_init() {
 
 # 用户自定义的前置初始化操作，依次执行目录 preinitdb.d 中的初始化脚本
 # 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_preinit_flag
-app_custom_preinit() {
+kafka_custom_preinit() {
     LOG_D "Check custom pre-init status of ${APP_NAME}..."
 
     # 检测用户配置文件目录是否存在 preinitdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
@@ -639,7 +560,7 @@ app_custom_preinit() {
 
 # 用户自定义的应用初始化操作，依次执行目录initdb.d中的初始化脚本
 # 执行完毕后，生成文件 ${APP_DATA_DIR}/.custom_init_flag
-app_custom_init() {
+kafka_custom_init() {
     LOG_D "Check custom init status of ${APP_NAME}..."
 
     # 检测用户配置文件目录是否存在 initdb.d 文件夹，如果存在，尝试执行目录中的初始化脚本
@@ -650,7 +571,7 @@ app_custom_init() {
             LOG_I "Process custom init scripts from /srv/conf/${APP_NAME}/initdb.d..."
 
             # 检测服务是否运行中；如果未运行，则启动后台服务
-            is_app_server_running || app_start_server_bg
+            kafka_is_server_running || kafka_start_server_bg
 
             # 检索所有可执行脚本，排序后执行
     		find "/srv/conf/${APP_NAME}/initdb.d/" -type f -regex ".*\.\(sh\|sql\|sql.gz\)" | sort | while read -r f; do
@@ -677,12 +598,12 @@ app_custom_init() {
     fi
 
     # 检测服务是否运行中；如果运行，则停止后台服务
-	is_app_server_running && app_stop_server
+	kafka_is_server_running && kafka_stop_server
 
     # 删除第一次运行生成的临时文件
-    app_clean_tmp_file
+    kafka_clean_tmp_file
 
 	# 绑定所有 IP ，启用远程访问
-    app_enable_remote_connections
+    kafka_enable_remote_connections
 }
 

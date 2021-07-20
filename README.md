@@ -8,13 +8,17 @@
 
 **版本信息**：
 
-- 2.5、latest （Scala 2.12）
 - 2.4（Scala 2.12）
 - 2.3（Scala 2.12）
 
 **镜像信息**
 
-* 镜像地址：colovu/kafka
+* 镜像地址：
+  - Aliyun仓库：registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.4
+  - DockerHub：colovu/kafka:2.4
+  * 依赖镜像：colovu/openjre:8
+
+> 后续相关命令行默认使用`[Docker Hub](https://hub.docker.com)`镜像服务器做说明
 
 
 
@@ -23,14 +27,19 @@
 Docker 快速启动命令：
 
 ```shell
-$ docker run -d colovu/kafka
+$ docker run -d colovu/kafka:2.4
 ```
 
 Docker-Compose 快速启动命令：
 
 ```shell
-$ curl -sSL https://raw.githubusercontent.com/colovu/docker-kafka/master/docker-compose.yml > docker-compose.yml
+# 从 Gitee 下载 Compose 文件
+$ curl -sSL -o https://gitee.com/colovu/docker-kafka/raw/2.4/docker-compose.yml
 
+# 从 Github 下载 Compose 文件
+$ curl -sSL -o https://raw.githubusercontent.com/colovu/docker-kafka/2.4/docker-compose.yml
+
+# 创建并启动容器
 $ docker-compose up -d
 ```
 
@@ -66,7 +75,7 @@ $ docker-compose up -d
 在初始化 Kafka 容器时，如果配置文件不存在，可以在命令行中使用相应参数对默认参数进行修改。类似命令如下：
 
 ```shell
-$ docker run -d -e "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181" --name kafka1 colovu/kafka:latest
+$ docker run -d -e "KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181" --name kafka1 colovu/kafka:2.4
 ```
 
 
@@ -205,7 +214,7 @@ version: '3.6'
 
 services:
   zookeeper:
-    image: 'colovu/zookeeper:latest'
+    image: 'colovu/zookeeper:3.5'
     ports:
      - '2181:2181'
     environment:
@@ -213,7 +222,7 @@ services:
       - ZOO_SERVER_USERS=kafka
       - ZOO_SERVER_PASSWORDS=kafka_password
   kafka:
-    image: 'colovu/kafka:latest'
+    image: 'colovu/kafka:2.4'
     hostname: kafka.example.com
     ports:
       - '9092'
@@ -273,19 +282,23 @@ kafka-console-consumer.sh --bootstrap-server 127.0.0.1:9092 --topic test --consu
 
 ### 容器安全
 
-本容器默认使用应用对应的运行时用户及用户组运行应用，以加强容器的安全性。在使用非`root`用户运行容器时，相关的资源访问会受限；应用仅能操作镜像创建时指定的路径及数据。使用`Non-root`方式的容器，更适合在生产环境中使用。
+本容器默认使用`non-root`运行应用，以加强容器的安全性。在使用`non-root`用户运行容器时，相关的资源访问会受限；应用仅能操作镜像创建时指定的路径及数据。使用`non-root`方式的容器，更适合在生产环境中使用。
+
+
+
+如果需要切换为`root`方式运行应用，可以在启动命令中增加`-u root`以指定运行的用户。
 
 
 
 ## 注意事项
 
-- 容器中启动参数不能配置为后台运行，只能使用前台运行方式；如果应用使用后台方式运行，则容器的启动命令会在运行后自动退出，从而导致容器退出
+- 容器中应用的启动参数不能配置为后台运行，如果应用使用后台方式运行，则容器的启动命令会在运行后自动退出，从而导致容器退出
 
 
 
 ## 更新记录
 
-- 2.5.0、latest
+- 2.4.1
 - 2.3.1
 
 
