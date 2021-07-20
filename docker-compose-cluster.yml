@@ -1,8 +1,12 @@
 version: '3.8'
 
+# 伪集群方式配置时，各服务对外暴露的端口在映射到主机时，需要使用不同的端口，否则会导致端口冲突
+
+# Docker-Compose 方式启动容器集群的 YAML 配置文件
+# 当前配置仅保证可以启动容器；更多配置参数请参考镜像 README.md 文档中说明
 services:
   zookeeper:
-    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.6'
+    image: 'colovu/zookeeper:3.6'
     ports:
       - '2181:2181'
     environment:
@@ -11,7 +15,7 @@ services:
 
   # 宿主机中其他应用直接访问时，需要确保宿主机hosts中已经包含kafka1定义
   kafka1:
-    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.5'
+    image: 'colovu/kafka:2.5'
     ports:
       - '9092:9092'
     environment:
@@ -27,7 +31,7 @@ services:
 
   # 宿主机中其他应用直接访问时，需要确保宿主机hosts中已经包含kafka2定义
   kafka2:
-    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.5'
+    image: 'colovu/kafka:2.5'
     ports:
       - '9093:9092'
     environment:
@@ -43,7 +47,7 @@ services:
 
   # 宿主机中其他应用直接访问时，需要确保宿主机hosts中已经包含kafka3定义
   kafka3:
-    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.5'
+    image: 'colovu/kafka:2.5'
     ports:
       - '9094:9092'
     environment:
