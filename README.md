@@ -8,7 +8,8 @@
 
 **版本信息**：
 
-- 2.5（Scala 2.12）、latest 
+- 2.6（Scala 2.13）、latest 
+- 2.5（Scala 2.12） 
 - 2.4（Scala 2.12）
 - 2.3（Scala 2.12）
 
@@ -299,7 +300,12 @@ kafka-console-consumer.sh --bootstrap-server 127.0.0.1:9092 --topic test --consu
 
 ## 更新记录
 
-- 2.5.0、latest
+2021/7/20:
+- 增加 2.6.2、latest
+- 更改使用 2.5.1 版本
+
+2020/12/20:
+- 2.5.0
 - 2.4.1
 - 2.3.1
 

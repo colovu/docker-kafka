@@ -5,7 +5,7 @@
 
 # 设置当前应用名称及版本
 ARG app_name=kafka
-ARG app_version=2.5.0
+ARG app_version=2.6.2
 
 # 设置默认仓库地址，默认为 阿里云 仓库
 ARG registry_url="registry.cn-shenzhen.aliyuncs.com"
@@ -27,7 +27,7 @@ ARG registry_url
 ARG apt_source
 ARG local_url
 
-ARG scala_version=2.12
+ARG scala_version=2.13
 
 ENV APP_NAME=${app_name} \
 	APP_VERSION=${app_version}
@@ -83,7 +83,7 @@ ARG apt_source
 ARG local_url
 
 
-ARG scala_version=2.12
+ARG scala_version=2.13
 
 # 镜像所包含应用的基础信息，定义环境变量，供后续脚本使用
 ENV APP_NAME=${app_name} \
