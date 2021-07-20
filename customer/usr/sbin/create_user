@@ -1,10 +1,12 @@
 #!/bin/bash
+# Ver: 1.2 by Endial Fang (endial@126.com)
+#
 # shell 执行参数，分别为 -e(命令执行错误则退出脚本) -u(变量未定义则报错) -x(打印实际待执行的命令行)
 set -eux
-groupadd --gid 998 --system ${APP_USER}
-#useradd --gid 998 --uid 999 --shell /bin/bash --home ${APP_DATA_DIR} --system ${APP_USER}
-useradd --gid 998 --uid 999 --shell /usr/sbin/nologin --home ${APP_DATA_DIR} --system ${APP_USER}
+groupadd --gid 1001 --system ${APP_USER}
+#useradd --gid 1001 --uid 1001 --shell /bin/bash --home /srv/data/${APP_NAME} --system ${APP_USER}
+useradd --gid 1001 --uid 1001 --shell /usr/sbin/nologin --home /srv/data/${APP_NAME} --system ${APP_USER}
 
-# 如果需要 sudo 权限，需要安装 su 软件包：apk add sudo 
+# 如果需要 sudo 权限，需要在 Dockerfile 中安装 su 软件包：RUN install_pkg sudo 
 #sed -i -e 's/^\sDefaults\s*secure_path\s*=/# Defaults secure_path=/' /etc/sudoers
 #echo "${APP_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers

@@ -1,10 +1,10 @@
 version: '3.8'
 
-# Docker-Compose 单容器使用参考 YAML 配置文件
-# 更多配置参数请参考镜像 README.md 文档中说明
+# Docker-Compose 方式启动容器的 YAML 配置文件
+# 当前配置仅保证可以启动容器；更多配置参数请参考镜像 README.md 文档中说明
 services:
   zookeeper:
-    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/zookeeper:3.5'
+    image: 'colovu/zookeeper:3.5'
     ports:
       - '2181:2181'
     environment:
@@ -12,7 +12,7 @@ services:
       - ZOO_LISTEN_ALLIPS_ENABLED=yes
 
   kafka:
-    image: 'registry.cn-shenzhen.aliyuncs.com/colovu/kafka:2.3'
+    image: 'colovu/kafka:2.3'
     ports:
       - '9092:9092'
     environment:
