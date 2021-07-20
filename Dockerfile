@@ -5,7 +5,7 @@
 
 # 设置当前应用名称及版本
 ARG app_name=kafka
-ARG app_version=2.5.0
+ARG app_version=2.5.1
 
 # 设置默认仓库地址，默认为 阿里云 仓库
 ARG registry_url="registry.cn-shenzhen.aliyuncs.com"
